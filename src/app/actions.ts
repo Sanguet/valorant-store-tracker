@@ -86,7 +86,7 @@ export async function setLocaleAction(formData: FormData) {
   redirect("/conexion");
 }
 
-export async function noteAction(kind: "offer" | "bundle", id: number, note: OfferNote | null) {
+export async function noteAction(kind: "offer" | "bundle", id: number, note: OfferNote) {
   const sql = await getSql();
   if (kind === "offer") setOfferNote(sql, id, note);
   else setBundleNote(sql, id, note);

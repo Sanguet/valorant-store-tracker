@@ -5,19 +5,17 @@ import { noteAction } from "@/app/actions";
 import type { OfferNote } from "@/domain/types";
 import { cn } from "@/lib/cn";
 
-const OFFER_NOTES: { value: OfferNote | null; label: string }[] = [
-  { value: null, label: "Sin nota" },
-  { value: "bought", label: "La compré" },
+const OFFER_NOTES: { value: OfferNote; label: string }[] = [
   { value: "passed", label: "La dejé pasar" },
+  { value: "bought", label: "La compré" },
 ];
 
-const BUNDLE_NOTES: { value: OfferNote | null; label: string }[] = [
-  { value: null, label: "Sin nota" },
-  { value: "bought", label: "Lo compré" },
+const BUNDLE_NOTES: { value: OfferNote; label: string }[] = [
   { value: "passed", label: "Lo dejé pasar" },
+  { value: "bought", label: "Lo compré" },
 ];
 
-export function NoteSwitch({ kind, id, note }: { kind: "offer" | "bundle"; id: number; note: OfferNote | null }) {
+export function NoteSwitch({ kind, id, note }: { kind: "offer" | "bundle"; id: number; note: OfferNote }) {
   const [pending, start] = useTransition();
   const options = kind === "offer" ? OFFER_NOTES : BUNDLE_NOTES;
   return (

@@ -14,7 +14,7 @@ export interface OfferView {
   weaponName: string | null;
   edition: string | null;
   priceVp: number;
-  note: OfferNote | null;
+  note: OfferNote;
   owned: boolean;
   wished: boolean;
   imageFile: string | null;
@@ -55,7 +55,7 @@ export interface BundleView {
   name: string;
   priceVp: number;
   expiresAt: string;
-  note: OfferNote | null;
+  note: OfferNote;
   imageFile: string | null;
   skins: BundleSkinView[];
   active: boolean;

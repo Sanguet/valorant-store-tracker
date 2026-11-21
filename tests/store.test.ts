@@ -50,7 +50,8 @@ describe("store", () => {
     expect(first.ok).toBe(true);
     const home = getHome(sql, now);
     expect(home.currentCycle?.offers).toHaveLength(4);
-    expect(home.currentCycle?.offers[0]).toMatchObject({ name: "Vándalo Prime", owned: true, priceVp: 1775 });
+    expect(home.currentCycle?.offers[0]).toMatchObject({ name: "Vándalo Prime", owned: true, priceVp: 1775, note: "passed" });
+    expect(home.currentBundles[0]?.note).toBe("passed");
     expect(home.currentCycle?.offers[1].owned).toBe(false);
     expect(home.currentBundles.map((bundle) => bundle.name)).toEqual(["Lote Reaver"]);
     expect(home.currentBundles[0].skins).toHaveLength(3);
@@ -81,7 +82,7 @@ describe("store", () => {
     expect(getHistory(sql).filter((item) => item.kind === "cycle")).toHaveLength(1);
     expect(getHome(sql, now).currentCycle?.offers[0].note).toBe("passed");
     setOfferNote(sql, offerId, null);
-    expect(getHome(sql, now).currentCycle?.offers[0].note).toBeNull();
+    expect(getHome(sql, now).currentCycle?.offers[0].note).toBe("passed");
   });
 
   it("shows a gap when more than one rotation passed without a read", async () => {

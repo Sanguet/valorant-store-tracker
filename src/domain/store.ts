@@ -120,7 +120,7 @@ function insertOffer(sql: Sql, cycleId: number, position: number, offer: Snapsho
   sql.run(
     `INSERT INTO offers (
       cycle_id, position, skin_id, level_id, name, weapon_name, edition, price_vp, note, name_fold, weapon_fold, unresolved
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'passed', ?, ?, ?)`,
     [
       cycleId,
       position,
@@ -263,7 +263,7 @@ export function recordSnapshot(sql: Sql, snapshot: Snapshot): RecordResult {
       }
       const inserted = sql.run(
         `INSERT INTO bundles (bundle_key, instance_id, expires_at, name, price_vp, image_url, note, read_at, source)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, 'passed', ?, ?)`,
         [bundle.bundleKey, bundle.instanceId, expiresAt, bundle.name, bundle.priceVp, bundle.imageUrl, snapshot.readAt, snapshot.source],
       );
       bundle.skins.forEach((skin, position) => insertBundleSkin(sql, inserted.lastInsertRowid, position, skin));
@@ -374,6 +374,6 @@ export function canLoadFixture(sql: Sql, fixturePuuid: string): boolean {
   return !account || account.isFixture || account.puuid.toLowerCase() === fixturePuuid.toLowerCase();
 }
 
-export function noteValue(value: SqlValue | null | undefined): OfferNote | null {
-  return value === "bought" || value === "passed" ? value : null;
+export function noteValue(value: SqlValue | null | undefined): OfferNote {
+  return value === "bought" ? "bought" : "passed";
 }
