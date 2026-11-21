@@ -105,19 +105,20 @@ describe("store", () => {
   it("matches a wishlist name, marks the current offer, and clears the mark when removed", async () => {
     const sql = await memorySql();
     loadFixture(sql, now);
-    const added = addWishlist(sql, { skinId: null, name: "vándalo prime" }, now);
+    const added = addWishlist(sql, { skinId: null, name: "sheriff ion" }, now);
     expect(added.ok).toBe(true);
     const home = getHome(sql, now);
-    expect(home.currentCycle?.offers[0].wished).toBe(true);
+    const sheriff = home.currentCycle?.offers.find((offer) => offer.name === "Sheriff Ion");
+    expect(sheriff?.wished).toBe(true);
     expect(home.wishlistHits).toBe(1);
     const [item] = getWishlist(sql, now);
     expect(item.inDaily).toBe(true);
     expect(item.inBundle).toBe(false);
-    expect(item.owned).toBe(true);
+    expect(item.owned).toBe(false);
     expect(item.seen).toBe(true);
     expect(item.lastAppearance?.kind).toBe("daily");
     if (added.ok) removeWishlist(sql, added.id);
-    expect(getHome(sql, now).currentCycle?.offers[0].wished).toBe(false);
+    expect(getHome(sql, now).currentCycle?.offers.find((offer) => offer.name === "Sheriff Ion")?.wished).toBe(false);
     expect(getWishlist(sql, now)).toHaveLength(0);
   });
 
@@ -152,12 +153,23 @@ describe("store", () => {
 
   it("binds a name-only wishlist row when the skin is recorded later", async () => {
     const sql = await memorySql();
-    addWishlist(sql, { skinId: null, name: "Vándalo Prime" }, now);
+    addWishlist(sql, { skinId: null, name: "Phantom Reaver" }, now);
     recordSnapshot(sql, remoteSnapshot("2026-11-21T15:00:00.000Z", 72000));
     const [item] = getWishlist(sql, now);
-    expect(item.skinId).toBe(demoSkins.vandalPrime.skinId);
+    expect(item.skinId).toBe(demoSkins.phantomReaver.skinId);
     expect(item.seen).toBe(true);
-    expect(item.weaponName).toBe("Vándalo");
+    expect(item.weaponName).toBe("Phantom");
+  });
+
+  it("drops an owned skin from the wishlist and refuses to add it", async () => {
+    const sql = await memorySql();
+    addWishlist(sql, { skinId: null, name: "Vándalo Prime" }, now);
+    addWishlist(sql, { skinId: null, name: "Phantom Reaver" }, now);
+    recordSnapshot(sql, remoteSnapshot("2026-11-21T15:00:00.000Z", 72000));
+    expect(getWishlist(sql, now).map((item) => item.name)).toEqual(["Phantom Reaver"]);
+    const again = addWishlist(sql, { skinId: demoSkins.vandalPrime.skinId, name: "Vándalo Prime" }, now);
+    expect(again).toEqual({ ok: false, reason: "owned" });
+    expect(getHome(sql, now).currentCycle?.offers[0].wished).toBe(false);
   });
 
   it("asks for the session only before a reader is chosen", () => {

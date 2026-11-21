@@ -102,6 +102,37 @@ function upsertSkin(sql: Sql, skin: SnapshotOffer) {
   sql.run("UPDATE wishlist SET skin_id = ? WHERE skin_id IS NULL AND name_fold = ?", [skin.skinId, foldedName]);
 }
 
+function ownedIdSet(sql: Sql): Set<string> {
+  return new Set(sql.all<{ skin_id: string }>("SELECT skin_id FROM ownership WHERE owned = 1").map((row) => row.skin_id.toLowerCase()));
+}
+
+function rowIsOwned(sql: Sql, owned: Set<string>, skinId: string | null, nameFold: string): boolean {
+  if (owned.size === 0) return false;
+  if (skinId && owned.has(skinId.toLowerCase())) return true;
+  const skins = sql.all<{ skin_id: string; level_id: string | null; name: string }>("SELECT skin_id, level_id, name FROM skins");
+  for (const skin of skins) {
+    const matches = owned.has(skin.skin_id.toLowerCase()) || (skin.level_id ? owned.has(skin.level_id.toLowerCase()) : false);
+    if (!matches) continue;
+    if (skinId && skin.skin_id.toLowerCase() === skinId.toLowerCase()) return true;
+    if (fold(skin.name) === nameFold) return true;
+  }
+  return false;
+}
+
+export function ownedSkinIds(sql: Sql, skins: { skinId: string; levelIds: string[] }[]): string[] {
+  const owned = ownedIdSet(sql);
+  return skins.flatMap((skin) => (owned.has(skin.skinId.toLowerCase()) || skin.levelIds.some((id) => owned.has(id.toLowerCase())) ? [skin.skinId] : []));
+}
+
+export function forgetOwnedWishlist(sql: Sql) {
+  const owned = ownedIdSet(sql);
+  if (owned.size === 0) return;
+  const rows = sql.all<{ id: number; skin_id: string | null; name_fold: string }>("SELECT id, skin_id, name_fold FROM wishlist");
+  for (const row of rows) {
+    if (rowIsOwned(sql, owned, row.skin_id, String(row.name_fold))) sql.run("DELETE FROM wishlist WHERE id = ?", [row.id]);
+  }
+}
+
 function applyOwnership(sql: Sql, ownedIds: string[] | null, nowIso: string) {
   if (!ownedIds) return;
   const owned = new Set(ownedIds.map((id) => id.toLowerCase()));
@@ -118,6 +149,7 @@ function applyOwnership(sql: Sql, ownedIds: string[] | null, nowIso: string) {
       sql.run("UPDATE ownership SET owned = 0, updated_at = ? WHERE skin_id = ?", [nowIso, row.skin_id]);
     }
   }
+  forgetOwnedWishlist(sql);
 }
 
 function insertOffer(sql: Sql, cycleId: number, position: number, offer: SnapshotOffer) {
@@ -300,7 +332,7 @@ export function rememberCatalogSkin(sql: Sql, skin: { skinId: string; levelId: s
   );
 }
 
-export function addWishlist(sql: Sql, input: { skinId: string | null; name: string }, now: Date): { ok: true; id: number } | { ok: false; reason: "empty" } {
+export function addWishlist(sql: Sql, input: { skinId: string | null; name: string }, now: Date): { ok: true; id: number } | { ok: false; reason: "empty" | "owned" } {
   const name = input.name.trim();
   const nameFold = fold(name);
   if (!nameFold) return { ok: false, reason: "empty" };
@@ -314,6 +346,7 @@ export function addWishlist(sql: Sql, input: { skinId: string | null; name: stri
         [nameFold, nameFold],
       );
   const skinId = input.skinId ?? known?.skin_id ?? null;
+  if (rowIsOwned(sql, ownedIdSet(sql), skinId, nameFold)) return { ok: false, reason: "owned" };
   const addedAt = now.toISOString();
   if (skinId) {
     const bySkin = sql.get<{ id: number }>("SELECT id FROM wishlist WHERE skin_id = ?", [skinId]);

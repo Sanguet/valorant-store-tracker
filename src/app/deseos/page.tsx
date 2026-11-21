@@ -3,6 +3,7 @@ import { WishlistPicker } from "@/components/wishlist-picker";
 import { RemoveWishlistButton } from "@/components/wishlist-button";
 import { SkinImage } from "@/components/skin-image";
 import { storeSkins, weaponChoices } from "@/domain/catalog";
+import { ownedSkinIds } from "@/domain/store";
 import { getWishlist } from "@/domain/queries";
 import { formatWhen } from "@/domain/text";
 import { getSql } from "@/server/db";
@@ -25,7 +26,7 @@ export default async function WishlistPage() {
           La coincidencia se ve al abrir la app. La lista no avisa por otro medio.
         </p>
       </div>
-      <WishlistPicker skins={skins} weapons={weaponChoices(catalog)} wishedIds={items.flatMap((item) => (item.skinId ? [item.skinId] : []))} />
+      <WishlistPicker skins={skins} weapons={weaponChoices(catalog)} wishedIds={items.flatMap((item) => (item.skinId ? [item.skinId] : []))} ownedIds={ownedSkinIds(sql, catalog.skins)} />
       {items.length === 0 ? <p className="text-zinc-300">La lista está vacía. Sumá una skin desde la tienda, desde un lote, o desde el catálogo.</p> : null}
       <ul className="grid gap-3">
         {items.map((item) => (

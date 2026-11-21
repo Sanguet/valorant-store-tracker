@@ -86,7 +86,7 @@ function SkinRow({ skin }: { skin: BundleSkinView }) {
         {skin.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Ya es tuya</span> : null}
         {skin.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En tu lista</span> : null}
       </div>
-      {skin.skinId && !skin.unresolved ? <WishlistButton skinId={skin.skinId} name={skin.name} wished={skin.wished} /> : null}
+      {skin.skinId && !skin.unresolved && !skin.owned ? <WishlistButton skinId={skin.skinId} name={skin.name} wished={skin.wished} /> : null}
     </li>
   );
 }

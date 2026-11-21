@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { catalogNameMatches, catalogSkinsByWeapon, EDITION_FILTERS, type SkinTier, type WeaponChoice, type WishlistSkin } from "@/domain/catalog";
 import { fold } from "@/domain/text";
 
-export function WishlistPicker({ skins, weapons, wishedIds }: { skins: WishlistSkin[]; weapons: WeaponChoice[]; wishedIds: string[] }) {
+export function WishlistPicker({ skins, weapons, wishedIds, ownedIds }: { skins: WishlistSkin[]; weapons: WeaponChoice[]; wishedIds: string[]; ownedIds: string[] }) {
   const router = useRouter();
   const [mode, setMode] = useState<"name" | "weapon">("name");
   const [query, setQuery] = useState("");
@@ -18,6 +18,7 @@ export function WishlistPicker({ skins, weapons, wishedIds }: { skins: WishlistS
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const wished = new Set(wishedIds);
+  const owned = new Set(ownedIds);
   const matches = mode === "name" ? catalogNameMatches(skins, query) : weapon ? catalogSkinsByWeapon(skins, weapon, tier) : [];
   const results = mode === "name" ? matches.slice(0, shown) : matches;
   const hidden = matches.length - results.length;
@@ -29,7 +30,7 @@ export function WishlistPicker({ skins, weapons, wishedIds }: { skins: WishlistS
       const result = await addCatalogSkinAction(skinId);
       setPendingId(null);
       if (!result.ok) {
-        setError("No pude sumar esa skin. Volvé a intentar.");
+        setError(result.reason === "owned" ? "Esa skin ya es tuya." : "No pude sumar esa skin. Volvé a intentar.");
         return;
       }
       router.refresh();
@@ -110,7 +111,7 @@ export function WishlistPicker({ skins, weapons, wishedIds }: { skins: WishlistS
       {results.length > 0 ? (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {results.map((skin) => (
-            <SkinCard key={skin.skinId} skin={skin} already={wished.has(skin.skinId)} pending={pending && pendingId === skin.skinId} disabled={pending} onAdd={() => add(skin.skinId)} />
+            <SkinCard key={skin.skinId} skin={skin} already={wished.has(skin.skinId)} owned={owned.has(skin.skinId)} pending={pending && pendingId === skin.skinId} disabled={pending} onAdd={() => add(skin.skinId)} />
           ))}
         </ul>
       ) : null}
@@ -140,7 +141,7 @@ function WeaponGrid({ weapons, onChoose }: { weapons: WeaponChoice[]; onChoose: 
   );
 }
 
-function SkinCard({ skin, already, pending, disabled, onAdd }: { skin: WishlistSkin; already: boolean; pending: boolean; disabled: boolean; onAdd: () => void }) {
+function SkinCard({ skin, already, owned, pending, disabled, onAdd }: { skin: WishlistSkin; already: boolean; owned: boolean; pending: boolean; disabled: boolean; onAdd: () => void }) {
   return (
     <li className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/20">
       <div className="flex h-48 items-center justify-center bg-black/30 p-3">
@@ -155,18 +156,18 @@ function SkinCard({ skin, already, pending, disabled, onAdd }: { skin: WishlistS
         <p className="text-xs text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
         <Button
           type="button"
-          variant={already ? "quiet" : "primary"}
-          disabled={already}
-          aria-label={already ? `${skin.name} ya está en deseados` : `Sumar ${skin.name} a deseados`}
-          aria-disabled={already || disabled || undefined}
+          variant={already || owned ? "quiet" : "primary"}
+          disabled={already || owned}
+          aria-label={owned ? `${skin.name} ya es tuya` : already ? `${skin.name} ya está en deseados` : `Sumar ${skin.name} a deseados`}
+          aria-disabled={already || owned || disabled || undefined}
           aria-busy={pending || undefined}
           onClick={() => {
-            if (already || disabled) return;
+            if (already || owned || disabled) return;
             onAdd();
           }}
           className="mt-auto"
         >
-          {already ? "Ya está en deseados" : pending ? "Sumando…" : "Sumar a deseados"}
+          {owned ? "Ya es tuya" : already ? "Ya está en deseados" : pending ? "Sumando…" : "Sumar a deseados"}
         </Button>
       </div>
     </li>

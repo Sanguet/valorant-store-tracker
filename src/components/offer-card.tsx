@@ -30,7 +30,7 @@ export function OfferCard({ offer, large = false, heading = "h2" }: { offer: Off
           {offer.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En tu lista</span> : null}
         </div>
         <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} />
-        {offer.skinId && !offer.unresolved ? <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} /> : null}
+        {offer.skinId && !offer.unresolved && !offer.owned ? <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} /> : null}
       </div>
     </article>
   );

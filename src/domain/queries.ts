@@ -1,6 +1,6 @@
 import { fold } from "@/domain/text";
 import type { Sql, SqlValue } from "@/domain/sql";
-import { noteValue } from "@/domain/store";
+import { forgetOwnedWishlist, noteValue } from "@/domain/store";
 import type { OfferNote } from "@/domain/types";
 
 const GAP_MS = 26 * 60 * 60 * 1000;
@@ -394,6 +394,7 @@ function presence(sql: Sql, now: Date): Presence {
 }
 
 export function getWishlist(sql: Sql, now: Date): WishlistItemView[] {
+  forgetOwnedWishlist(sql);
   const rows = sql.all<{ id: number; skin_id: string | null; name: string; name_fold: string }>(
     "SELECT id, skin_id, name, name_fold FROM wishlist ORDER BY added_at DESC",
   );
