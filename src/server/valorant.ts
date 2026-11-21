@@ -154,13 +154,17 @@ async function clientVersion(sql: Sql, log: string): Promise<string | null> {
   return clientVersionFromLog(log) ?? cached;
 }
 
+export async function readStoreCatalog(sql: Sql): Promise<Catalog> {
+  return loadCatalog(toApiLanguage(getSettings(sql).locale));
+}
+
 async function loadCatalog(language: string): Promise<Catalog> {
   const file = path.join(process.cwd(), "data", "catalog", `${language}.json`);
   const fresh = (fetchedAt: string) => Date.now() - new Date(fetchedAt).getTime() < 24 * 60 * 60 * 1000;
   if (fs.existsSync(file)) {
     try {
       const cached = JSON.parse(fs.readFileSync(file, "utf8")) as { fetchedAt: string; catalog: Catalog };
-      if (fresh(cached.fetchedAt)) return cached.catalog;
+      if (fresh(cached.fetchedAt) && cached.catalog.skins.some((skin) => skin.tier)) return cached.catalog;
     } catch {
       // A bad cache is ignored and fetched again.
     }

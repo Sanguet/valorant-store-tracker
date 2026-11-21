@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
 import { getBundleList, getHistory, getHome, getWishlist, searchSkins } from "@/domain/queries";
-import { addWishlist, getAccount, recordSnapshot, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
+import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -142,6 +142,24 @@ describe("store", () => {
     expect(vandal?.[0].appearances.every((appearance) => appearance.href.startsWith("/"))).toBe(true);
     expect(searchSkins(sql, "odin")).toEqual([]);
     expect(searchSkins(sql, "   ")).toBeNull();
+  });
+
+  it("keeps weapon and edition for a catalog skin that has not appeared yet", async () => {
+    const sql = await memorySql();
+    rememberCatalogSkin(sql, {
+      skinId: "99999999-9999-4999-8999-999999999999",
+      levelId: null,
+      name: "Odin Reaver",
+      weaponName: "Odin",
+      edition: "Edición exclusiva",
+      imageUrl: null,
+    });
+    addWishlist(sql, { skinId: "99999999-9999-4999-8999-999999999999", name: "Odin Reaver" }, now);
+    const [item] = getWishlist(sql, now);
+    expect(item.seen).toBe(false);
+    expect(item.weaponName).toBe("Odin");
+    expect(item.edition).toBe("Edición exclusiva");
+    expect(item.inDaily).toBe(false);
   });
 
   it("binds a name-only wishlist row when the skin is recorded later", async () => {

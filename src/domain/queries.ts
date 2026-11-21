@@ -430,15 +430,21 @@ export function getWishlist(sql: Sql, now: Date): WishlistItemView[] {
   return rows.map((row) => {
     const skinId = text(row.skin_id);
     const summary = summaryFrom(appearanceRows(sql, skinId, String(row.name_fold)), String(row.id), skinId, String(row.name), flags);
+    const stored = skinId
+      ? sql.get<{ name: string; weapon_name: string | null; edition: string | null; image_file: string | null }>(
+          "SELECT name, weapon_name, edition, image_file FROM skins WHERE skin_id = ?",
+          [skinId],
+        )
+      : undefined;
     const bundle = current.bundles.find((item) => (skinId && item.skinIds.has(skinId)) || item.names.has(String(row.name_fold)));
     const inDaily = (skinId && current.dailySkinIds.has(skinId)) || current.dailyNames.has(String(row.name_fold));
     return {
       id: num(row.id),
-      name: summary.appearances.length > 0 ? summary.name : String(row.name),
+      name: summary.appearances.length > 0 ? summary.name : (stored?.name ?? String(row.name)),
       skinId,
-      weaponName: summary.weaponName,
-      edition: summary.edition,
-      imageFile: summary.imageFile,
+      weaponName: summary.weaponName ?? text(stored?.weapon_name),
+      edition: summary.edition ?? text(stored?.edition),
+      imageFile: summary.imageFile ?? text(stored?.image_file),
       owned: summary.owned,
       inDaily,
       inBundle: Boolean(bundle),

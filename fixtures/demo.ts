@@ -95,6 +95,7 @@ const catalog: Catalog = {
     name: skin.name,
     weaponName: skin.weaponName,
     edition: skin.edition,
+    tier: null,
     imageUrl: null,
   })),
   bundles: [

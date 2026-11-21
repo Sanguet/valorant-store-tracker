@@ -282,6 +282,20 @@ export function setBundleNote(sql: Sql, bundleId: number, note: OfferNote | null
   sql.run("UPDATE bundles SET note = ? WHERE id = ?", [note, bundleId]);
 }
 
+export function rememberCatalogSkin(sql: Sql, skin: { skinId: string; levelId: string | null; name: string; weaponName: string; edition: string | null; imageUrl: string | null }) {
+  sql.run(
+    `INSERT INTO skins (skin_id, level_id, name, weapon_name, edition, image_url)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(skin_id) DO UPDATE SET
+       level_id = COALESCE(skins.level_id, excluded.level_id),
+       name = excluded.name,
+       weapon_name = excluded.weapon_name,
+       edition = excluded.edition,
+       image_url = COALESCE(skins.image_url, excluded.image_url)`,
+    [skin.skinId, skin.levelId, skin.name, skin.weaponName, skin.edition, skin.imageUrl],
+  );
+}
+
 export function addWishlist(sql: Sql, input: { skinId: string | null; name: string }, now: Date): { ok: true; id: number } | { ok: false; reason: "empty" } {
   const name = input.name.trim();
   const nameFold = fold(name);

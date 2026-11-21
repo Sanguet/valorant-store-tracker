@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseAuthBody, parseRedirect } from "@/domain/auth";
-import { catalogFromValorantApi } from "@/domain/catalog";
+import { catalogFromValorantApi, catalogSkinsByWeapon, catalogWeapons, storeSkins, suggestCatalogSkins } from "@/domain/catalog";
 import { toApiLanguage } from "@/domain/language";
 import { parseLockfile } from "@/domain/lockfile";
 import { probeStorefront, StorefrontRequestError } from "@/domain/probe";
@@ -130,7 +130,43 @@ describe("parsers", () => {
       name: "Vándalo Prime",
       weaponName: "Vándalo",
       edition: "Edición prémium",
+      tier: "premium",
     });
     expect(catalog.bundles[0].name).toBe("Lote Prime");
+  });
+
+  it("suggests catalog skins by a partial name and filters a weapon by edition", () => {
+    const catalog = catalogFromValorantApi({
+      tiers: [
+        { uuid: "60bca009-4182-7998-dee7-b8a2558dc369", displayName: "Edición prémium" },
+        { uuid: "e046854e-406c-37f4-6607-19a9ba8426fc", displayName: "Edición exclusiva" },
+      ],
+      weapons: [
+        {
+          displayName: "Vándalo",
+          skins: [
+            { uuid: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA1", displayName: "Vándalo", contentTierUuid: null },
+            {
+              uuid: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA3",
+              displayName: "Vándalo Prime",
+              contentTierUuid: "60bca009-4182-7998-dee7-b8a2558dc369",
+            },
+            {
+              uuid: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA4",
+              displayName: "Vándalo Reaver",
+              contentTierUuid: "e046854e-406c-37f4-6607-19a9ba8426fc",
+            },
+          ],
+        },
+      ],
+      bundles: [],
+    });
+    const skins = storeSkins(catalog);
+    expect(skins.map((skin) => skin.name)).toEqual(["Vándalo Prime", "Vándalo Reaver"]);
+    expect(suggestCatalogSkins(skins, "reaver").map((skin) => skin.name)).toEqual(["Vándalo Reaver"]);
+    expect(suggestCatalogSkins(skins, "   ")).toEqual([]);
+    expect(catalogWeapons(skins)).toEqual(["Vándalo"]);
+    expect(catalogSkinsByWeapon(skins, "Vándalo", "exclusive").map((skin) => skin.name)).toEqual(["Vándalo Reaver"]);
+    expect(catalogSkinsByWeapon(skins, "Vándalo", null)).toHaveLength(2);
   });
 });

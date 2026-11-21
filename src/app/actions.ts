@@ -6,6 +6,7 @@ import { toApiLanguage } from "@/domain/language";
 import { setMeta } from "@/domain/meta";
 import {
   addWishlist,
+  rememberCatalogSkin,
   removeWishlist,
   removeWishlistSkin,
   resetStore,
@@ -17,7 +18,8 @@ import {
 import type { OfferNote } from "@/domain/types";
 import { getSql, saveSql } from "@/server/db";
 import { loadExample, refreshStore } from "@/server/refresh";
-import { signIn, submitCode } from "@/server/valorant";
+import { cacheImages } from "@/server/images";
+import { readStoreCatalog, signIn, submitCode } from "@/server/valorant";
 
 function refreshPages() {
   revalidatePath("/", "layout");
@@ -102,13 +104,22 @@ export async function wishlistAction(skinId: string, name: string, wished: boole
   refreshPages();
 }
 
-export async function addNameAction(formData: FormData) {
-  const name = String(formData.get("name") ?? "");
+export async function addCatalogSkinAction(skinId: string) {
   const sql = await getSql();
-  addWishlist(sql, { skinId: null, name }, new Date());
+  const skin = (await readStoreCatalog(sql)).skins.find((item) => item.skinId === skinId.toLowerCase() && item.tier);
+  if (!skin) return;
+  rememberCatalogSkin(sql, {
+    skinId: skin.skinId,
+    levelId: skin.levelIds[0] ?? null,
+    name: skin.name,
+    weaponName: skin.weaponName,
+    edition: skin.edition,
+    imageUrl: skin.imageUrl,
+  });
+  addWishlist(sql, { skinId: skin.skinId, name: skin.name }, new Date());
+  await cacheImages(sql);
   saveSql();
   refreshPages();
-  redirect("/deseos");
 }
 
 export async function removeWishlistAction(id: number) {
