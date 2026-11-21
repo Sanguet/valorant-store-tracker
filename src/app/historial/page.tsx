@@ -26,7 +26,7 @@ export default async function HistoryPage() {
               <p className="text-sm text-zinc-400">Vence el {formatWhen(item.cycle.expiresAt)}</p>
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {item.cycle.offers.map((offer) => (
-                  <li key={offer.name}>
+                  <li key={offer.name} className={`rounded-2xl border-2 p-2 ${offer.wished ? "border-emerald-400" : "border-transparent"}`}>
                     <SkinImage file={offer.imageFile} name={offer.name} />
                     <p className="mt-2 text-sm">{offer.name}</p>
                   </li>

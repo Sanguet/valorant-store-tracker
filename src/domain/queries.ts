@@ -31,7 +31,7 @@ export interface CycleView {
 export interface CycleSummary {
   id: number;
   expiresAt: string;
-  offers: { name: string; imageFile: string | null }[];
+  offers: { name: string; imageFile: string | null; wished: boolean }[];
 }
 
 export interface HistoryItem {
@@ -265,7 +265,11 @@ export function getHistory(sql: Sql): HistoryItem[] {
     if (cycle) {
       items.push({
         kind: "cycle",
-        cycle: { id: cycle.id, expiresAt: cycle.expiresAt, offers: cycle.offers.map((offer) => ({ name: offer.name, imageFile: offer.imageFile })) },
+        cycle: {
+          id: cycle.id,
+          expiresAt: cycle.expiresAt,
+          offers: cycle.offers.map((offer) => ({ name: offer.name, imageFile: offer.imageFile, wished: offer.wished })),
+        },
       });
     }
     const older = rows[index + 1];

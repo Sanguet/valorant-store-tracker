@@ -30,7 +30,7 @@ export default async function WishlistPage() {
       {items.length === 0 ? <p className="text-zinc-300">La lista está vacía. Sumá una skin desde la tienda, desde un lote, o por su nombre.</p> : null}
       <ul className="grid gap-3">
         {items.map((item) => (
-          <li key={item.id} className="grid gap-4 rounded-3xl border border-white/10 bg-[#141922] p-4 sm:grid-cols-[160px_1fr_auto]">
+          <li key={item.id} className="grid gap-4 rounded-3xl border-2 border-emerald-400 bg-[#141922] p-4 sm:grid-cols-[160px_1fr_auto]">
             <SkinImage file={item.imageFile} name={item.name} />
             <div>
               <h2 className="text-lg font-medium">{item.name}</h2>

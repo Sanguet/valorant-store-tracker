@@ -6,7 +6,7 @@ import type { OfferView } from "@/domain/queries";
 
 export function OfferCard({ offer }: { offer: OfferView }) {
   return (
-    <article className={`flex flex-col overflow-hidden rounded-3xl border bg-[#141922] ${offer.owned ? "border-emerald-400/50" : "border-white/10"}`}>
+    <article className={`flex flex-col overflow-hidden rounded-3xl border-2 bg-[#141922] ${offer.wished ? "border-emerald-400" : offer.owned ? "border-emerald-400/40" : "border-white/10"}`}>
       <SkinImage file={offer.imageFile} name={offer.name} />
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div>

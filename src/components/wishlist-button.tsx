@@ -8,7 +8,7 @@ export function WishlistButton({ skinId, name, wished }: { skinId: string; name:
   const [pending, start] = useTransition();
   return (
     <Button variant="ghost" disabled={pending} onClick={() => start(() => wishlistAction(skinId, name, wished))}>
-      {wished ? "Sacar de la lista" : "Sumar a la lista"}
+      {wished ? "Sacar de la lista" : "Sumar a deseados"}
     </Button>
   );
 }

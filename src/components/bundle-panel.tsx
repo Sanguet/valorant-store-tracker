@@ -37,7 +37,7 @@ export function BundlePanel({ bundle, linked = false }: { bundle: BundleView; li
       </div>
       <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {bundle.skins.map((skin) => (
-          <li key={`${bundle.id}-${skin.skinId ?? skin.name}`} className={`rounded-2xl border p-3 ${skin.owned ? "border-emerald-400/50" : "border-white/10"}`}>
+          <li key={`${bundle.id}-${skin.skinId ?? skin.name}`} className={`rounded-2xl border-2 p-3 ${skin.wished ? "border-emerald-400" : skin.owned ? "border-emerald-400/40" : "border-white/10"}`}>
             <SkinImage file={skin.imageFile} name={skin.name} />
             <h3 className="mt-3 font-medium">{skin.name}</h3>
             <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
