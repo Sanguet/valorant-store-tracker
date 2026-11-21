@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import fs from "node:fs";
 import path from "node:path";
 import initSqlJs, { type Database, type SqlValue as RawValue } from "sql.js";
 import { type Sql, type SqlValue } from "@/domain/sql";
@@ -6,11 +7,15 @@ import { type Sql, type SqlValue } from "@/domain/sql";
 const require = createRequire(import.meta.url);
 
 function sqlWasm(file: string) {
+  const fromProject = path.join(process.cwd(), "node_modules", "sql.js", "dist", file);
+  if (fs.existsSync(fromProject)) return fromProject;
   try {
-    return path.join(path.dirname(require.resolve("sql.js")), file);
+    const resolved = path.join(path.dirname(require.resolve("sql.js")), file);
+    if (!resolved.includes("[externals]") && fs.existsSync(resolved)) return resolved;
   } catch {
-    return path.join(process.cwd(), "node_modules", "sql.js", "dist", file);
+    // Turbopack can report a module path that is not a file.
   }
+  return fromProject;
 }
 
 export interface OpenSql {
