@@ -27,6 +27,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
   const account = getAccount(sql);
   const pending = query.paso === "mfa" ? getPendingAuth(sql, new Date()) : null;
   const hint = getMeta(sql, "mfa_hint");
+  const method = getMeta(sql, "mfa_method");
   const loginError = query.error && LOGIN_ERRORS.has(query.error) ? ERRORS[query.error] : null;
   const exampleError = query.error === "ejemplo" ? ERRORS.ejemplo : null;
   const resetError = query.error === "reset" ? ERRORS.reset : null;
@@ -38,7 +39,13 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
           <p className="mt-2 text-sm text-zinc-400">La contraseña se manda a Riot y no queda en esta app. La sesión queda solo en esta computadora.</p>
         </div>
         {loginError ? <FormAlert>{loginError}</FormAlert> : null}
-        <RiotLogin pending={Boolean(pending)} hint={hint} entrada />
+        <RiotLogin pending={Boolean(pending)} hint={hint} method={method} entrada />
+        {query.error === "captcha" ? (
+          <form action={chooseReaderAction}>
+            <input type="hidden" name="reader" value="lockfile" />
+            <SubmitButton idle="Usar el Riot Client" pending="Eligiendo…" />
+          </form>
+        ) : null}
       </div>
     );
   }
@@ -75,7 +82,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
             </div>
           ) : null}
           <div className="mt-4">
-            <RiotLogin pending={Boolean(pending)} hint={hint} />
+            <RiotLogin pending={Boolean(pending)} hint={hint} method={method} />
           </div>
         </section>
       </div>

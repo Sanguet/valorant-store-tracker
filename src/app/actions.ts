@@ -64,10 +64,11 @@ export async function loginAction(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   if (!username || !password) redirect(connectionTarget(formData, { error: "auth" }));
   const sql = await getSql();
-  setReader(sql, "remote");
   const result = await signIn(sql, username, password);
+  if (result.ok || result.code === "mfa") setReader(sql, "remote");
   if (!result.ok && result.code === "mfa") {
     setMeta(sql, "mfa_hint", "hint" in result ? (result.hint ?? "") : "");
+    setMeta(sql, "mfa_method", "method" in result ? (result.method ?? "") : "");
     saveSql();
     refreshPages();
     redirect(connectionTarget(formData, { paso: "mfa" }));
@@ -82,6 +83,13 @@ export async function mfaAction(formData: FormData) {
   const code = String(formData.get("code") ?? "").trim();
   const sql = await getSql();
   const result = await submitCode(sql, code);
+  if (!result.ok && result.code === "mfa" && "hint" in result) {
+    setMeta(sql, "mfa_hint", result.hint ?? "");
+    setMeta(sql, "mfa_method", result.method ?? "");
+    saveSql();
+    refreshPages();
+    redirect(connectionTarget(formData, { paso: "mfa" }));
+  }
   saveSql();
   refreshPages();
   if (!result.ok) redirect(connectionTarget(formData, { paso: "mfa", error: result.code }));
@@ -133,7 +141,8 @@ export async function addCatalogSkinAction(skinId: string) {
     edition: skin.edition,
     imageUrl: skin.imageUrl,
   });
-  addWishlist(sql, { skinId: skin.skinId, name: skin.name }, new Date());
+  const added = addWishlist(sql, { skinId: skin.skinId, name: skin.name }, new Date());
+  if (!added.ok) return { ok: false as const, reason: added.reason };
   await cacheImages(sql);
   saveSql();
   refreshPages();

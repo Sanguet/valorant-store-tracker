@@ -3,10 +3,12 @@ import { SubmitButton } from "@/components/submit-button";
 
 const field = "w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3";
 
-export function RiotLogin({ pending, hint, entrada = false }: { pending: boolean; hint: string | null; entrada?: boolean }) {
+export function RiotLogin({ pending, hint, method = null, entrada = false }: { pending: boolean; hint: string | null; method?: string | null; entrada?: boolean }) {
   if (pending) {
+    const channel = method === "email" ? "Riot lo mandó por correo." : method ? `Riot pidió el método ${method}.` : "Riot pidió un código.";
     return (
       <div className="grid gap-3">
+        <p className="text-sm text-zinc-300">{channel} Sin el código la sesión no sigue.</p>
         <form action={mfaAction} className="grid gap-3">
           {entrada ? <input type="hidden" name="entrada" value="1" /> : null}
           <label htmlFor="code" className="text-sm">

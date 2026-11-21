@@ -3,7 +3,8 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
-import { parseAuthBody, parseRedirect } from "@/domain/auth";
+import { parseRedirect } from "@/domain/auth";
+import { beginRemoteLogin, continueRemoteLogin, type AuthExchange } from "@/domain/riot-login";
 import { catalogFromValorantApi, expandOwnedIds, indexCatalog, SKIN_ITEM_TYPE, type Catalog } from "@/domain/catalog";
 import { cookieHeader, rememberSetCookie } from "@/domain/cookies";
 import { toApiLanguage, toRiotLanguage } from "@/domain/language";
@@ -20,7 +21,6 @@ import type { Snapshot } from "@/domain/types";
 const CLIENT_PLATFORM =
   "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9";
 const RIOT_UA = "RiotClient/63.0.9.4909983.4789131 rso-auth (Windows;10;;Professional, x64)";
-const AUTH_URL = "https://auth.riotgames.com/api/v1/authorization";
 const REAUTH_URL =
   "https://auth.riotgames.com/authorize?redirect_uri=https%3A%2F%2Fplayvalorant.com%2Fopt_in&client_id=play-valorant-web-prod&response_type=token%20id_token&nonce=1&scope=account%20openid";
 
@@ -40,8 +40,31 @@ export interface ReadFailure {
 
 export type LoginResult =
   | { ok: true }
-  | { ok: false; code: "mfa"; hint: string | null }
+  | { ok: false; code: "mfa"; hint: string | null; method: string | null }
   | { ok: false; code: string; message: string };
+
+function authExchange(userAgent: string): AuthExchange {
+  return (method, url, body, cookies) => {
+    const jar = new Map(Object.entries(cookies));
+    return riotFetch(jar, method, url, body, userAgent).then((response) => ({
+      status: response.status,
+      body: response.body,
+      cookies: Object.fromEntries(jar),
+    }));
+  };
+}
+
+async function remoteClient(): Promise<{ userAgent: string; sdkVersion: string }> {
+  const fallback = { userAgent: RIOT_UA, sdkVersion: "23.8.0.1382" };
+  try {
+    const response = await fetchJson("https://valorant-api.com/v1/version");
+    const build = (response.body as { data?: { riotClientBuild?: string } } | null)?.data?.riotClientBuild;
+    if (!build) return fallback;
+    return { userAgent: `RiotClient/${build} rso-auth (Windows;10;;Professional, x64)`, sdkVersion: fallback.sdkVersion };
+  } catch {
+    return fallback;
+  }
+}
 
 const MESSAGES = {
   "no-client": "No encontré el Riot Client en esta máquina. Abrilo e iniciá sesión, y volvé a leer.",
@@ -352,9 +375,10 @@ export async function readLockfile(sql: Sql): Promise<ReadSuccess | ReadFailure>
   return result;
 }
 
-async function riotFetch(jar: Map<string, string>, method: string, url: string, body?: unknown) {
+async function riotFetch(jar: Map<string, string>, method: string, url: string, body?: unknown, userAgent = RIOT_UA) {
   const headers = new Headers();
-  headers.set("User-Agent", RIOT_UA);
+  headers.set("User-Agent", userAgent);
+  headers.set("Referer", "https://auth.riotgames.com/");
   headers.set("Accept", "application/json");
   const cookie = cookieHeader(jar);
   if (cookie) headers.set("Cookie", cookie);
@@ -416,45 +440,33 @@ async function finishLogin(sql: Sql, jar: Map<string, string>, accessToken: stri
 }
 
 export async function signIn(sql: Sql, username: string, password: string): Promise<LoginResult> {
-  const jar = new Map<string, string>();
   const locale = toRiotLanguage(getSettings(sql).locale);
-  await riotFetch(jar, "POST", AUTH_URL, {
-    client_id: "play-valorant-web-prod",
-    nonce: "1",
-    redirect_uri: "https://playvalorant.com/opt_in",
-    response_type: "token id_token",
-    scope: "account openid",
-  });
-  const primary = await riotFetch(jar, "PUT", AUTH_URL, {
-    type: "auth",
-    language: locale,
-    remember: true,
-    riot_identity: { username, password, captcha: "" },
-  });
-  let outcome = parseAuthBody(primary.body);
-  if (outcome.kind === "unexpected" && (primary.status === 400 || primary.status === 415)) {
-    const legacy = await riotFetch(jar, "PUT", AUTH_URL, { type: "auth", username, password, remember: true, language: locale });
-    outcome = parseAuthBody(legacy.body);
+  const client = await remoteClient();
+  const stop = await beginRemoteLogin(authExchange(client.userAgent), { username, password, language: locale, sdkVersion: client.sdkVersion });
+  if (stop.step === "mfa") {
+    savePendingAuth(sql, stop.cookies, new Date());
+    return { ok: false, code: "mfa", hint: stop.hint, method: stop.method };
   }
-  if (outcome.kind === "mfa") {
-    savePendingAuth(sql, Object.fromEntries(jar), new Date());
-    return { ok: false, code: "mfa", hint: outcome.hint };
+  if (stop.step === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
+  if (stop.step === "tokens") {
+    return finishLogin(sql, new Map(Object.entries(stop.cookies)), stop.tokens.accessToken, stop.tokens.idToken, stop.tokens.expiresIn);
   }
-  if (outcome.kind === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
-  if (outcome.kind === "tokens") return finishLogin(sql, jar, outcome.accessToken, outcome.idToken, outcome.expiresIn);
-  if (outcome.kind === "auth-failure") return { ok: false, code: "auth", message: MESSAGES.auth };
   return { ok: false, code: "auth", message: MESSAGES.auth };
 }
 
 export async function submitCode(sql: Sql, code: string): Promise<LoginResult> {
   const pending = getPendingAuth(sql, new Date());
   if (!pending) return { ok: false, code: "mfa-invalid", message: MESSAGES["mfa-invalid"] };
-  const jar = new Map(Object.entries(pending.cookies));
-  const response = await riotFetch(jar, "PUT", AUTH_URL, { type: "multifactor", code, rememberDevice: true });
-  const outcome = parseAuthBody(response.body);
-  if (outcome.kind === "invalid-code") return { ok: false, code: "mfa-invalid", message: MESSAGES["mfa-invalid"] };
-  if (outcome.kind === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
-  if (outcome.kind === "tokens") return finishLogin(sql, jar, outcome.accessToken, outcome.idToken, outcome.expiresIn);
+  const client = await remoteClient();
+  const stop = await continueRemoteLogin(authExchange(client.userAgent), pending.cookies, code);
+  if (stop.step === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
+  if (stop.step === "mfa") {
+    savePendingAuth(sql, stop.cookies, new Date());
+    return { ok: false, code: "mfa", hint: stop.hint, method: stop.method };
+  }
+  if (stop.step === "tokens") {
+    return finishLogin(sql, new Map(Object.entries(stop.cookies)), stop.tokens.accessToken, stop.tokens.idToken, stop.tokens.expiresIn);
+  }
   return { ok: false, code: "mfa-invalid", message: MESSAGES["mfa-invalid"] };
 }
 
