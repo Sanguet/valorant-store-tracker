@@ -5,22 +5,16 @@ import { noteAction } from "@/app/actions";
 import type { OfferNote } from "@/domain/types";
 import { cn } from "@/lib/cn";
 
-const OFFER_NOTES: { value: OfferNote; label: string }[] = [
-  { value: "passed", label: "La dejé pasar" },
-  { value: "bought", label: "La compré" },
-];
-
-const BUNDLE_NOTES: { value: OfferNote; label: string }[] = [
-  { value: "passed", label: "Lo dejé pasar" },
-  { value: "bought", label: "Lo compré" },
+const NOTES: { value: OfferNote; label: string }[] = [
+  { value: "passed", label: "Skip" },
+  { value: "bought", label: "Buy" },
 ];
 
 export function NoteSwitch({ kind, id, note }: { kind: "offer" | "bundle"; id: number; note: OfferNote }) {
   const [pending, start] = useTransition();
-  const options = kind === "offer" ? OFFER_NOTES : BUNDLE_NOTES;
   return (
     <div className="flex flex-wrap gap-1" role="group" aria-label={kind === "offer" ? "Nota de la oferta" : "Nota del lote"}>
-      {options.map((option) => (
+      {NOTES.map((option) => (
         <button
           key={option.label}
           type="button"
