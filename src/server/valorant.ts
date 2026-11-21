@@ -11,6 +11,7 @@ import { probeStorefront, StorefrontRequestError } from "@/domain/probe";
 import { clientVersionFromLog, SHARDS, shardForRegion, shardFromLog } from "@/domain/shard";
 import { parseStorefront } from "@/domain/storefront";
 import { getSettings } from "@/domain/store";
+import { dataDirectory } from "@/lib/data-dir";
 import type { Sql } from "@/domain/sql";
 import type { Snapshot } from "@/domain/types";
 
@@ -142,7 +143,7 @@ export async function readStoreCatalog(sql: Sql): Promise<Catalog> {
 }
 
 async function loadCatalog(language: string): Promise<Catalog> {
-  const file = path.join(process.cwd(), "data", "catalog", `${language}.json`);
+  const file = path.join(/*turbopackIgnore: true*/ dataDirectory(), "catalog", `${language}.json`);
   const fresh = (fetchedAt: string) => Date.now() - new Date(fetchedAt).getTime() < 24 * 60 * 60 * 1000;
   if (fs.existsSync(file)) {
     try {

@@ -3,12 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { migrate } from "@/domain/schema";
 import type { Sql } from "@/domain/sql";
+import { dataDirectory } from "@/lib/data-dir";
 import { openSql, type OpenSql } from "@/lib/open-sql";
 
 const globalForDb = globalThis as unknown as { store?: OpenSql };
 
 function databaseFile() {
-  return path.join(process.cwd(), "data", "store.db");
+  return path.join(/*turbopackIgnore: true*/ dataDirectory(), "store.db");
 }
 
 export async function getSql(): Promise<Sql> {

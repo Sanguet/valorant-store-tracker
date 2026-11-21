@@ -1,6 +1,17 @@
+import { createRequire } from "node:module";
 import path from "node:path";
 import initSqlJs, { type Database, type SqlValue as RawValue } from "sql.js";
 import { type Sql, type SqlValue } from "@/domain/sql";
+
+const require = createRequire(import.meta.url);
+
+function sqlWasm(file: string) {
+  try {
+    return path.join(path.dirname(require.resolve("sql.js")), file);
+  } catch {
+    return path.join(process.cwd(), "node_modules", "sql.js", "dist", file);
+  }
+}
 
 export interface OpenSql {
   sql: Sql;
@@ -13,7 +24,7 @@ let initPromise: ReturnType<typeof initSqlJs> | null = null;
 function loadSqlJs() {
   if (!initPromise) {
     initPromise = initSqlJs({
-      locateFile: (file) => path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
+      locateFile: (file) => sqlWasm(file),
     });
   }
   return initPromise;

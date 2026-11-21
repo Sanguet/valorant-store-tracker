@@ -13,6 +13,19 @@ npm run dev
 
 La app escucha en `http://127.0.0.1:3000`.
 
+## Para usar en Windows, sin Node ni git
+
+En cada [GitHub Release](https://github.com/Sanguet/valorant-store-tracker/releases) hay un `valorant-tienda-windows.zip`.
+
+1. Descargá el zip y descomprimilo.
+2. Abrí el Riot Client e iniciá sesión ahí.
+3. Hacé doble clic en `Abrir la tienda.bat`.
+4. Se abre el navegador. No cierres la ventana negra mientras la uses.
+
+El historial queda en `%LOCALAPPDATA%\ValorantStoreTracker`. Una versión nueva se descomprime en otra carpeta y no borra ese historial.
+
+El release lo arma `.github/workflows/release-windows.yml` al pushear un tag `v*` o al correr el workflow a mano.
+
 ## Cómo se lee la tienda
 
 La única vía es el Riot Client abierto en esta máquina. La app lee el lockfile. No hay usuario ni contraseña.

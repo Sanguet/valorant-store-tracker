@@ -2,6 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import type { Sql } from "@/domain/sql";
+import { dataDirectory } from "@/lib/data-dir";
 import { listBundleImages, listSkinImages, setBundleImage, setSkinImage } from "@/domain/store";
 
 function placeholderSvg(name: string): string {
@@ -35,7 +36,7 @@ async function saveImage(directory: string, id: string, name: string, imageUrl: 
           const type = response.headers.get("content-type") ?? "";
           const extension = type.includes("svg") ? "svg" : type.includes("webp") ? "webp" : "png";
           const file = `${safe}.${extension}`;
-          fs.writeFileSync(path.join(directory, file), bytes);
+          fs.writeFileSync(path.join(/*turbopackIgnore: true*/ directory, file), bytes);
           return file;
         }
       }
@@ -44,12 +45,12 @@ async function saveImage(directory: string, id: string, name: string, imageUrl: 
     }
   }
   const file = `${safe}.svg`;
-  fs.writeFileSync(path.join(directory, file), placeholderSvg(name), "utf8");
+  fs.writeFileSync(path.join(/*turbopackIgnore: true*/ directory, file), placeholderSvg(name), "utf8");
   return file;
 }
 
 export async function cacheImages(sql: Sql) {
-  const directory = path.join(process.cwd(), "data", "images");
+  const directory = path.join(/*turbopackIgnore: true*/ dataDirectory(), "images");
   fs.mkdirSync(directory, { recursive: true });
   for (const skin of listSkinImages(sql)) {
     if (skin.imageFile) continue;

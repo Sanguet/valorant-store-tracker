@@ -9,6 +9,7 @@
     "dev": "next dev -H 127.0.0.1 -p 3000",
     "dev:ejemplo": "node scripts/dev-ejemplo.mjs",
     "build": "next build",
+    "package:windows": "next build && node scripts/package-windows.mjs",
     "start": "next start -H 127.0.0.1 -p 3000",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

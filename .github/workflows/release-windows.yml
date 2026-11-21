@@ -1,0 +1,41 @@
+name: Release Windows
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag del release, por ejemplo v1.0.0
+        required: true
+        default: v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.18.1"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: node scripts/package-windows.mjs
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: Tienda de Valorant ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          body: |
+            Descargá `valorant-tienda-windows.zip`, descomprimilo y hacé doble clic en `Abrir la tienda.bat`.
+
+            Hace falta el Riot Client abierto en esa PC. No hace falta instalar Node ni git.
+          files: dist/valorant-tienda-windows.zip
+          make_latest: true
+          draft: false
+          prerelease: false
