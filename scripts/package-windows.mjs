@@ -53,6 +53,36 @@ function pruneSqlDir(directory) {
   }
 }
 
+function collectRequiredModules(directory, ids) {
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      collectRequiredModules(full, ids);
+      continue;
+    }
+    if (!entry.name.endsWith(".js")) continue;
+    const source = fs.readFileSync(full, "utf8");
+    for (const match of source.matchAll(/require\("([^"]+)"\)/g)) {
+      if (match[1].startsWith("next/")) ids.add(match[1]);
+    }
+  }
+}
+
+function copyRequiredNextFiles(appDir) {
+  const ids = new Set();
+  collectRequiredModules(path.join(appDir, ".next", "server"), ids);
+  for (const id of ids) {
+    const destination = path.join(appDir, "node_modules", ...id.split("/"));
+    if (fs.existsSync(destination)) continue;
+    const source = path.join(root, "node_modules", ...id.split("/"));
+    if (!fs.existsSync(source) || fs.lstatSync(source).isSymbolicLink()) {
+      throw new Error(`El paquete necesita ${id} como archivo real.`);
+    }
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.copyFileSync(source, destination);
+  }
+}
+
 if (!fs.existsSync(path.join(standalone, "server.js"))) {
   throw new Error("Falta .next/standalone. Corré npm run build antes de empaquetar.");
 }
@@ -75,6 +105,7 @@ for (const file of ["sql-wasm.js", "sql-wasm.wasm"]) {
 }
 pruneSqlDir(path.join(staging, "app", "node_modules"));
 pruneSqlDir(path.join(staging, "app", ".next", "node_modules"));
+copyRequiredNextFiles(path.join(staging, "app"));
 
 fs.mkdirSync(cache, { recursive: true });
 const nodeZip = path.join(cache, `node-v${nodeVersion}-win-x64.zip`);
@@ -131,5 +162,8 @@ if (!listing.includes("node_modules/sql.js/dist/sql-wasm.wasm")) {
 }
 if (!/sql\.js-[^/\s]+\/dist\/sql-wasm\.js/.test(listing)) {
   throw new Error("El zip no incluye el sql.js que carga el servidor.");
+}
+if (!listing.includes("next/dist/compiled/next-server/app-route-turbo.runtime.prod.js")) {
+  throw new Error("El zip no incluye el runtime que sirve las imágenes.");
 }
 console.log(`Listo: ${zipPath} (${Math.round(zip.size / 1_048_576)} MB)`);
