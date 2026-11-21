@@ -11,7 +11,46 @@ const cache = path.join(root, "dist", "cache");
 const standalone = path.join(root, ".next", "standalone");
 
 function copyDir(from, to) {
-  fs.cpSync(from, to, { recursive: true });
+  fs.cpSync(from, to, { recursive: true, dereference: true });
+}
+
+function isJunction(full, stat) {
+  if (!stat.isDirectory()) return false;
+  try {
+    return Boolean(fs.readlinkSync(full));
+  } catch {
+    return false;
+  }
+}
+
+function materializeLinks(directory) {
+  for (const name of fs.readdirSync(directory)) {
+    const full = path.join(directory, name);
+    const stat = fs.lstatSync(full);
+    if (stat.isSymbolicLink() || isJunction(full, stat)) {
+      const target = fs.realpathSync(full);
+      fs.rmSync(full, { recursive: true, force: true });
+      fs.cpSync(target, full, { recursive: true, dereference: true });
+      continue;
+    }
+    if (stat.isDirectory()) materializeLinks(full);
+  }
+}
+
+function pruneSqlPackage(directory) {
+  const dist = path.join(directory, "dist");
+  if (!fs.existsSync(dist)) return;
+  for (const file of fs.readdirSync(dist)) {
+    if (file === "sql-wasm.js" || file === "sql-wasm.wasm") continue;
+    fs.rmSync(path.join(dist, file), { recursive: true, force: true });
+  }
+}
+
+function pruneSqlDir(directory) {
+  if (!fs.existsSync(directory)) return;
+  for (const name of fs.readdirSync(directory)) {
+    if (name === "sql.js" || name.startsWith("sql.js-")) pruneSqlPackage(path.join(directory, name));
+  }
 }
 
 if (!fs.existsSync(path.join(standalone, "server.js"))) {
@@ -21,16 +60,21 @@ if (!fs.existsSync(path.join(standalone, "server.js"))) {
 fs.rmSync(staging, { recursive: true, force: true });
 fs.mkdirSync(staging, { recursive: true });
 copyDir(standalone, path.join(staging, "app"));
+materializeLinks(path.join(staging, "app"));
 fs.rmSync(path.join(staging, "app", "data"), { recursive: true, force: true });
+fs.rmSync(path.join(staging, "app", "dist"), { recursive: true, force: true });
 copyDir(path.join(root, ".next", "static"), path.join(staging, "app", ".next", "static"));
 if (fs.existsSync(path.join(root, "public"))) copyDir(path.join(root, "public"), path.join(staging, "app", "public"));
 
-const wasmFrom = path.join(root, "node_modules", "sql.js", "dist");
-const wasmTo = path.join(staging, "app", "node_modules", "sql.js", "dist");
-fs.mkdirSync(wasmTo, { recursive: true });
-for (const file of fs.readdirSync(wasmFrom)) {
-  fs.copyFileSync(path.join(wasmFrom, file), path.join(wasmTo, file));
+const sqlPackage = path.join(root, "node_modules", "sql.js");
+const sqlTo = path.join(staging, "app", "node_modules", "sql.js");
+fs.mkdirSync(path.join(sqlTo, "dist"), { recursive: true });
+fs.copyFileSync(path.join(sqlPackage, "package.json"), path.join(sqlTo, "package.json"));
+for (const file of ["sql-wasm.js", "sql-wasm.wasm"]) {
+  fs.copyFileSync(path.join(sqlPackage, "dist", file), path.join(sqlTo, "dist", file));
 }
+pruneSqlDir(path.join(staging, "app", "node_modules"));
+pruneSqlDir(path.join(staging, "app", ".next", "node_modules"));
 
 fs.mkdirSync(cache, { recursive: true });
 const nodeZip = path.join(cache, `node-v${nodeVersion}-win-x64.zip`);
@@ -77,4 +121,15 @@ fs.rmSync(zipPath, { force: true });
 execFileSync("tar", ["-a", "-c", "-f", zipPath, "-C", path.join(root, "dist"), folderName], { stdio: "inherit" });
 const zip = fs.statSync(zipPath);
 if (zip.size < 1_000_000) throw new Error("El zip quedó demasiado chico.");
+const listing = execFileSync("tar", ["-tvf", zipPath], { encoding: "utf8" });
+const links = listing.split(/\r?\n/).filter((line) => line.startsWith("l"));
+if (links.length) {
+  throw new Error(`El zip contiene enlaces que no funcionan en otra PC:\n${links.join("\n")}`);
+}
+if (!listing.includes("node_modules/sql.js/dist/sql-wasm.wasm")) {
+  throw new Error("El zip no incluye sql-wasm.wasm");
+}
+if (!/sql\.js-[^/\s]+\/dist\/sql-wasm\.js/.test(listing)) {
+  throw new Error("El zip no incluye el sql.js que carga el servidor.");
+}
 console.log(`Listo: ${zipPath} (${Math.round(zip.size / 1_048_576)} MB)`);

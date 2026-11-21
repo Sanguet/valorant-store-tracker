@@ -1,21 +1,16 @@
-import { createRequire } from "node:module";
-import fs from "node:fs";
 import path from "node:path";
 import initSqlJs, { type Database, type SqlValue as RawValue } from "sql.js";
 import { type Sql, type SqlValue } from "@/domain/sql";
 
-const require = createRequire(import.meta.url);
+function loadInit() {
+  if (typeof initSqlJs === "function") return initSqlJs;
+  const fallback = (initSqlJs as { default?: typeof initSqlJs }).default;
+  if (typeof fallback === "function") return fallback;
+  throw new Error("No pude cargar sql.js");
+}
 
 function sqlWasm(file: string) {
-  const fromProject = path.join(process.cwd(), "node_modules", "sql.js", "dist", file);
-  if (fs.existsSync(fromProject)) return fromProject;
-  try {
-    const resolved = path.join(path.dirname(require.resolve("sql.js")), file);
-    if (!resolved.includes("[externals]") && fs.existsSync(resolved)) return resolved;
-  } catch {
-    // Turbopack can report a module path that is not a file.
-  }
-  return fromProject;
+  return path.join(/*turbopackIgnore: true*/ process.cwd(), "node_modules", "sql.js", "dist", file);
 }
 
 export interface OpenSql {
@@ -28,7 +23,7 @@ let initPromise: ReturnType<typeof initSqlJs> | null = null;
 
 function loadSqlJs() {
   if (!initPromise) {
-    initPromise = initSqlJs({
+    initPromise = loadInit()({
       locateFile: (file) => sqlWasm(file),
     });
   }

@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     "/*": ["./node_modules/sql.js/dist/**/*"],
   },
   outputFileTracingExcludes: {
-    "/*": ["./data/**/*"],
+    "/*": ["./data/**/*", "./dist/**/*"],
   },
 };
 
