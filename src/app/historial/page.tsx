@@ -23,7 +23,9 @@ export default async function HistoryPage() {
             </p>
           ) : (
             <Link key={item.cycle.id} href={`/historial/${item.cycle.id}`} className="rounded-3xl border border-white/10 bg-[#141922] p-4 hover:border-white/30">
-              <p className="text-sm text-zinc-400">Vence el {formatWhen(item.cycle.expiresAt)}</p>
+              <p className="text-sm text-zinc-400">
+                {new Date(item.cycle.expiresAt).getTime() <= Date.now() ? "Venció" : "Vence"} el {formatWhen(item.cycle.expiresAt)}
+              </p>
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {item.cycle.offers.map((offer) => (
                   <li key={offer.name} className={`rounded-2xl border-2 p-2 ${offer.wished ? "border-emerald-400" : "border-transparent"}`}>

@@ -8,8 +8,9 @@ const buttonStyles = cva(
   {
     variants: {
       variant: {
-        primary: "bg-[#ff4655] text-white hover:bg-[#ff6170]",
+        primary: "bg-[#ff4655] text-zinc-950 hover:bg-[#ff8d96]",
         quiet: "border border-white/15 bg-white/5 text-zinc-100 hover:bg-white/10",
+        danger: "border border-[#ff4655]/50 bg-[#ff4655]/15 text-[#ffb4bc] hover:bg-[#ff4655]/25",
         ghost: "text-zinc-300 hover:bg-white/10",
       },
     },
@@ -21,7 +22,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantPr
   asChild?: boolean;
 }
 
-export function Button({ className, variant, asChild = false, ...props }: ButtonProps) {
+export function Button({ className, variant, asChild = false, type, ...props }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
-  return <Comp className={cn(buttonStyles({ variant }), className)} {...props} />;
+  return <Comp className={cn(buttonStyles({ variant }), className)} type={asChild ? type : (type ?? "button")} {...props} />;
 }

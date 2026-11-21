@@ -5,8 +5,9 @@ import { tierColor } from "@/domain/catalog";
 import { formatVp } from "@/domain/text";
 import type { OfferView } from "@/domain/queries";
 
-export function OfferCard({ offer, large = false }: { offer: OfferView; large?: boolean }) {
+export function OfferCard({ offer, large = false, heading = "h2" }: { offer: OfferView; large?: boolean; heading?: "h2" | "h3" }) {
   const rarity = large ? tierColor(offer.edition) : null;
+  const Heading = heading;
   const frame = rarity
     ? "border-[3px]"
     : `border-2 ${offer.wished ? "border-emerald-400" : offer.owned ? "border-emerald-400/40" : "border-white/10"}`;
@@ -18,7 +19,7 @@ export function OfferCard({ offer, large = false }: { offer: OfferView; large?: 
       <SkinImage file={offer.imageFile} name={offer.name} large={large} />
       <div className={`flex flex-1 flex-col gap-3 ${large ? "p-5" : "p-4"}`}>
         <div>
-          <h3 className={`font-semibold leading-tight ${large ? "text-xl" : "text-lg"}`}>{offer.name}</h3>
+          <Heading className={`font-semibold leading-tight ${large ? "text-xl" : "text-lg"}`}>{offer.name}</Heading>
           <p className="text-sm text-zinc-400">
             {[offer.weaponName, offer.edition].filter(Boolean).join(" · ")}
           </p>
@@ -28,7 +29,7 @@ export function OfferCard({ offer, large = false }: { offer: OfferView; large?: 
           {offer.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Ya es tuya</span> : null}
           {offer.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En tu lista</span> : null}
         </div>
-        <NoteSwitch kind="offer" id={offer.id} note={offer.note} />
+        <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} />
         {offer.skinId && !offer.unresolved ? <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} /> : null}
       </div>
     </article>

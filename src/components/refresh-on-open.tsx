@@ -1,21 +1,31 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { refreshAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 
 export function RefreshOnOpen({ enabled, refreshedAt }: { enabled: boolean; refreshedAt: string | null }) {
   const router = useRouter();
   const started = useRef(false);
+  const [reading, setReading] = useState(false);
   useEffect(() => {
     if (!enabled || started.current) return;
     const recent = refreshedAt ? Date.now() - new Date(refreshedAt).getTime() < 20000 : false;
     if (recent) return;
     started.current = true;
-    void refreshAction().then(() => router.refresh());
+    setReading(true);
+    void refreshAction().finally(() => {
+      setReading(false);
+      router.refresh();
+    });
   }, [enabled, refreshedAt, router]);
-  return null;
+  if (!reading) return null;
+  return (
+    <p role="status" aria-live="polite" className="text-sm text-zinc-300">
+      Leyendo la tienda…
+    </p>
+  );
 }
 
 export function RefreshButton({ variant = "primary" }: { variant?: "primary" | "quiet" }) {
@@ -24,11 +34,15 @@ export function RefreshButton({ variant = "primary" }: { variant?: "primary" | "
   return (
     <Button
       variant={variant}
-      disabled={pending}
-      onClick={() => start(async () => {
-        await refreshAction();
-        router.refresh();
-      })}
+      aria-disabled={pending || undefined}
+      aria-busy={pending || undefined}
+      onClick={() => {
+        if (pending) return;
+        start(async () => {
+          await refreshAction();
+          router.refresh();
+        });
+      }}
     >
       {pending ? "Leyendo…" : "Actualizar"}
     </Button>

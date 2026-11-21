@@ -143,7 +143,7 @@ export function storeSkins(catalog: Catalog): WishlistSkin[] {
   return catalog.skins.flatMap((skin) => (skin.tier ? [{ ...skin, tier: skin.tier }] : []));
 }
 
-export function suggestCatalogSkins(skins: WishlistSkin[], query: string, limit = 12): WishlistSkin[] {
+export function catalogNameMatches(skins: WishlistSkin[], query: string): WishlistSkin[] {
   const folded = fold(query);
   if (!folded) return [];
   return skins
@@ -152,8 +152,11 @@ export function suggestCatalogSkins(skins: WishlistSkin[], query: string, limit 
       const rank = Number(fold(a.name).startsWith(folded)) - Number(fold(b.name).startsWith(folded));
       if (rank !== 0) return -rank;
       return a.name.localeCompare(b.name, "es");
-    })
-    .slice(0, limit);
+    });
+}
+
+export function suggestCatalogSkins(skins: WishlistSkin[], query: string, limit = 12): WishlistSkin[] {
+  return catalogNameMatches(skins, query).slice(0, limit);
 }
 
 export function catalogWeapons(skins: WishlistSkin[]): string[] {

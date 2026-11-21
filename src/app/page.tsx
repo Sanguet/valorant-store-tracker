@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { loadExampleAction } from "@/app/actions";
 import { BundlePanel } from "@/components/bundle-panel";
-import { Countdown } from "@/components/countdown";
+import { Remaining } from "@/components/countdown";
 import { OfferCard } from "@/components/offer-card";
 import { RefreshButton, RefreshOnOpen } from "@/components/refresh-on-open";
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export default async function HomePage() {
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
             <p>
-              Vence el {formatWhen(home.currentCycle.expiresAt)} · quedan <Countdown expiresAt={home.currentCycle.expiresAt} />
+              Vence el {formatWhen(home.currentCycle.expiresAt)} · <Remaining expiresAt={home.currentCycle.expiresAt} serverNow={now.getTime()} />
             </p>
             {canRefresh ? <RefreshButton variant="quiet" /> : null}
           </div>
@@ -63,7 +63,7 @@ export default async function HomePage() {
         <section className="rounded-3xl border border-white/10 p-6">
           <h1 className="text-2xl font-semibold">La última tienda ya venció</h1>
           <p className="mt-2 text-zinc-300">Una tienda nueva solo aparece cuando una lectura llega.</p>
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4 flex flex-wrap gap-3">
             {canRefresh ? <RefreshButton /> : null}
             <Button asChild>
               <Link href="/historial">Ver el historial</Link>
@@ -84,8 +84,16 @@ export default async function HomePage() {
       {home.currentBundles.length > 0 ? (
         <section className="grid gap-3 border-t border-white/10 pt-6">
           <h2 className="text-sm font-medium text-zinc-400">Lotes destacados</h2>
-          {home.currentBundles.map((bundle) => (
-            <BundlePanel key={bundle.id} bundle={bundle} linked />
+          {home.currentBundles.map((bundle, index) => (
+            <BundlePanel
+              key={bundle.id}
+              bundle={bundle}
+              linked
+              heading="h3"
+              serverNow={now.getTime()}
+              foldSkins={home.currentBundles.length > 1}
+              skinsOpen={index === 0}
+            />
           ))}
         </section>
       ) : null}

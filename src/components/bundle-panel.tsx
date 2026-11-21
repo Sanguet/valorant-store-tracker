@@ -1,12 +1,28 @@
 import Link from "next/link";
-import { Countdown } from "@/components/countdown";
+import { Remaining } from "@/components/countdown";
 import { NoteSwitch } from "@/components/note-switch";
 import { SkinImage } from "@/components/skin-image";
 import { WishlistButton } from "@/components/wishlist-button";
+import { tierColor } from "@/domain/catalog";
 import { formatVp, formatWhen } from "@/domain/text";
-import type { BundleView } from "@/domain/queries";
+import type { BundleSkinView, BundleView } from "@/domain/queries";
 
-export function BundlePanel({ bundle, linked = false }: { bundle: BundleView; linked?: boolean }) {
+export function BundlePanel({
+  bundle,
+  linked = false,
+  heading = "h2",
+  foldSkins = false,
+  skinsOpen = true,
+  serverNow,
+}: {
+  bundle: BundleView;
+  linked?: boolean;
+  heading?: "h1" | "h2" | "h3";
+  foldSkins?: boolean;
+  skinsOpen?: boolean;
+  serverNow: number;
+}) {
+  const Heading = heading;
   const title = linked ? (
     <Link href={`/lotes/${bundle.id}`} className="hover:underline">
       {bundle.name}
@@ -14,43 +30,63 @@ export function BundlePanel({ bundle, linked = false }: { bundle: BundleView; li
   ) : (
     bundle.name
   );
+  const wished = bundle.skins.filter((skin) => skin.wished);
+  const skins = bundle.skins.length === 0 ? (
+    <p className="mt-4 text-sm text-zinc-400">Este lote no incluye skins de arma.</p>
+  ) : (
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {bundle.skins.map((skin) => (
+        <SkinRow key={`${bundle.id}-${skin.skinId ?? skin.name}`} skin={skin} />
+      ))}
+    </ul>
+  );
   return (
     <section className="rounded-3xl border border-white/10 bg-[#141922] p-4 sm:p-5">
       <div className="grid gap-4 md:grid-cols-[180px_1fr]">
         <SkinImage file={bundle.imageFile} name={bundle.name} />
         <div className="flex flex-col gap-3">
           <div>
-            <h2 className="text-xl font-semibold">{title}</h2>
+            <Heading className="text-xl font-semibold">{title}</Heading>
             <p className="text-sm text-zinc-300">{formatVp(bundle.priceVp)}</p>
             <p className="text-sm text-zinc-400">
               {bundle.active ? (
                 <>
-                  Vence el {formatWhen(bundle.expiresAt)} · quedan <Countdown expiresAt={bundle.expiresAt} />
+                  Vence el {formatWhen(bundle.expiresAt)} · <Remaining expiresAt={bundle.expiresAt} serverNow={serverNow} />
                 </>
               ) : (
                 <>Venció el {formatWhen(bundle.expiresAt)}</>
               )}
             </p>
+            {wished.length > 0 ? <p className="text-sm text-amber-100">En tu lista: {wished.map((skin) => skin.name).join(", ")}</p> : null}
           </div>
-          <NoteSwitch kind="bundle" id={bundle.id} note={bundle.note} />
+          <NoteSwitch kind="bundle" id={bundle.id} note={bundle.note} subject={bundle.name} />
         </div>
       </div>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {bundle.skins.map((skin) => (
-          <li key={`${bundle.id}-${skin.skinId ?? skin.name}`} className={`rounded-2xl border-2 p-3 ${skin.wished ? "border-emerald-400" : skin.owned ? "border-emerald-400/40" : "border-white/10"}`}>
-            <SkinImage file={skin.imageFile} name={skin.name} />
-            <h3 className="mt-3 font-medium">{skin.name}</h3>
-            <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              {skin.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Ya es tuya</span> : null}
-              {skin.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En tu lista</span> : null}
-            </div>
-            {skin.skinId && !skin.unresolved ? (
-              <WishlistButton skinId={skin.skinId} name={skin.name} wished={skin.wished} />
-            ) : null}
-          </li>
-        ))}
-      </ul>
+      {bundle.skins.length > 0 && foldSkins ? (
+        <details className="mt-4" open={skinsOpen}>
+          <summary className="cursor-pointer text-sm text-zinc-300">Ver las skins ({bundle.skins.length})</summary>
+          <div className="mt-3">{skins}</div>
+        </details>
+      ) : (
+        <div className={bundle.skins.length === 0 ? undefined : "mt-4"}>{skins}</div>
+      )}
     </section>
+  );
+}
+
+function SkinRow({ skin }: { skin: BundleSkinView }) {
+  const rarity = tierColor(skin.edition);
+  const frame = skin.wished ? "border-2 border-emerald-400" : rarity ? "border-[3px]" : "border-2 border-white/10";
+  return (
+    <li className={`rounded-2xl p-3 ${frame}`} style={skin.wished || !rarity ? undefined : { borderColor: rarity }}>
+      <SkinImage file={skin.imageFile} name={skin.name} />
+      <p className="mt-3 font-medium">{skin.name}</p>
+      <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
+      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+        {skin.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Ya es tuya</span> : null}
+        {skin.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En tu lista</span> : null}
+      </div>
+      {skin.skinId && !skin.unresolved ? <WishlistButton skinId={skin.skinId} name={skin.name} wished={skin.wished} /> : null}
+    </li>
   );
 }

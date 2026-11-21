@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WishlistPicker } from "@/components/wishlist-picker";
 import { RemoveWishlistButton } from "@/components/wishlist-button";
 import { SkinImage } from "@/components/skin-image";
@@ -9,7 +10,11 @@ import { readStoreCatalog } from "@/server/valorant";
 
 export default async function WishlistPage() {
   const sql = await getSql();
-  const items = getWishlist(sql, new Date());
+  const now = new Date();
+  const items = getWishlist(sql, now)
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => Number(!(a.item.inDaily || a.item.inBundle)) - Number(!(b.item.inDaily || b.item.inBundle)) || a.index - b.index)
+    .map(({ item }) => item);
   const catalog = await readStoreCatalog(sql);
   const skins = storeSkins(catalog);
   return (
@@ -34,15 +39,16 @@ export default async function WishlistPage() {
                 {item.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-1 text-emerald-200">Ya es tuya</span> : null}
                 {item.inDaily ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En la tienda de hoy</span> : null}
                 {item.inBundle ? <span className="rounded-full bg-amber-300/15 px-2 py-1 text-amber-100">En {item.bundleName ?? "un lote vigente"}</span> : null}
-                {!item.inDaily && !item.inBundle ? <span className="rounded-full bg-white/5 px-2 py-1 text-zinc-300">En ninguno de los dos</span> : null}
               </div>
               {item.lastAppearance ? (
-                <p className="mt-2 text-sm text-zinc-400">
-                  Última aparición: {item.lastAppearance.place}, vence el {formatWhen(item.lastAppearance.expiresAt)}
-                </p>
+                <Link href={item.lastAppearance.href} className="mt-2 inline-block text-sm text-zinc-300 underline-offset-2 hover:underline">
+                  Última aparición: {item.lastAppearance.place}, {new Date(item.lastAppearance.expiresAt).getTime() <= now.getTime() ? "venció" : "vence"} el {formatWhen(item.lastAppearance.expiresAt)}
+                </Link>
               ) : null}
             </div>
-            <RemoveWishlistButton id={item.id} />
+            <div className="sm:self-start">
+              <RemoveWishlistButton id={item.id} name={item.name} />
+            </div>
           </li>
         ))}
       </ul>

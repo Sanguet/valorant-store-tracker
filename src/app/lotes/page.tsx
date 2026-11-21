@@ -3,7 +3,8 @@ import { getBundleList } from "@/domain/queries";
 import { getSql } from "@/server/db";
 
 export default async function BundlesPage() {
-  const bundles = getBundleList(await getSql(), new Date());
+  const now = new Date();
+  const bundles = getBundleList(await getSql(), now);
   return (
     <div className="grid gap-6">
       <div>
@@ -15,15 +16,23 @@ export default async function BundlesPage() {
       <section className="grid gap-4">
         <h2 className="text-lg font-medium">Vigentes</h2>
         {bundles.current.length === 0 ? <p className="text-sm text-zinc-400">No hay un lote vigente guardado.</p> : null}
-        {bundles.current.map((bundle) => (
-          <BundlePanel key={bundle.id} bundle={bundle} />
+        {bundles.current.map((bundle, index) => (
+          <BundlePanel
+            key={bundle.id}
+            bundle={bundle}
+            linked
+            heading="h3"
+            serverNow={now.getTime()}
+            foldSkins={bundles.current.length > 1}
+            skinsOpen={index === 0}
+          />
         ))}
       </section>
       <section className="grid gap-4">
         <h2 className="text-lg font-medium">Anteriores</h2>
         {bundles.past.length === 0 ? <p className="text-sm text-zinc-400">Todavía no hay lotes anteriores.</p> : null}
         {bundles.past.map((bundle) => (
-          <BundlePanel key={bundle.id} bundle={bundle} linked />
+          <BundlePanel key={bundle.id} bundle={bundle} linked heading="h3" serverNow={now.getTime()} />
         ))}
       </section>
     </div>

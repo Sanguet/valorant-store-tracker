@@ -32,13 +32,14 @@ export function Header({ account }: { account: string }) {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={active ? "page" : undefined}
                 className={cn("rounded-full px-3 py-1.5 whitespace-nowrap", active ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}
               >
                 {link.label}
               </Link>
             );
           })}
-          <Link href="/conexion" className={cn("rounded-full px-3 py-1.5 whitespace-nowrap", pathname.startsWith("/conexion") ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
+          <Link href="/conexion" aria-current={pathname.startsWith("/conexion") ? "page" : undefined} className={cn("rounded-full px-3 py-1.5 whitespace-nowrap", pathname.startsWith("/conexion") ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
             Conexión
           </Link>
         </nav>

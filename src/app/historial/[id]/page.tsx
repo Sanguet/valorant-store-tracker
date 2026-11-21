@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Countdown } from "@/components/countdown";
+import { Remaining } from "@/components/countdown";
 import { OfferCard } from "@/components/offer-card";
 import { getCycle } from "@/domain/queries";
 import { formatWhen } from "@/domain/text";
@@ -8,7 +8,8 @@ import { getSql } from "@/server/db";
 
 export default async function CyclePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const cycle = getCycle(await getSql(), Number(id), new Date());
+  const now = new Date();
+  const cycle = getCycle(await getSql(), Number(id), now);
   if (!cycle) notFound();
   const active = new Date(cycle.expiresAt).getTime() > Date.now();
   return (
@@ -20,7 +21,7 @@ export default async function CyclePage({ params }: { params: Promise<{ id: stri
         <h1 className="text-2xl font-semibold">Ciclo del {formatWhen(cycle.expiresAt)}</h1>
         {active ? (
           <p className="text-sm text-zinc-400">
-            Quedan <Countdown expiresAt={cycle.expiresAt} />
+            <Remaining expiresAt={cycle.expiresAt} serverNow={now.getTime()} />
           </p>
         ) : (
           <p className="text-sm text-zinc-400">Este ciclo ya venció.</p>

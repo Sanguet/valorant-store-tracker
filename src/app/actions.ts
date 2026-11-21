@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toApiLanguage } from "@/domain/language";
 import { setMeta } from "@/domain/meta";
+import { clearPendingAuth } from "@/domain/session";
 import {
   addWishlist,
   rememberCatalogSkin,
@@ -23,6 +24,14 @@ import { readStoreCatalog, signIn, submitCode } from "@/server/valorant";
 
 function refreshPages() {
   revalidatePath("/", "layout");
+}
+
+function connectionTarget(formData: FormData, extra?: Record<string, string>) {
+  const params = new URLSearchParams();
+  if (String(formData.get("entrada") ?? "") === "1") params.set("entrada", "1");
+  for (const [key, value] of Object.entries(extra ?? {})) params.set(key, value);
+  const query = params.toString();
+  return query ? `/conexion?${query}` : "/conexion";
 }
 
 export async function refreshAction() {
@@ -47,13 +56,13 @@ export async function chooseReaderAction(formData: FormData) {
   saveSql();
   refreshPages();
   if (reader === "lockfile") redirect("/");
-  redirect("/conexion");
+  redirect("/conexion?entrada=1");
 }
 
 export async function loginAction(formData: FormData) {
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  if (!username || !password) redirect("/conexion?error=auth");
+  if (!username || !password) redirect(connectionTarget(formData, { error: "auth" }));
   const sql = await getSql();
   setReader(sql, "remote");
   const result = await signIn(sql, username, password);
@@ -61,11 +70,11 @@ export async function loginAction(formData: FormData) {
     setMeta(sql, "mfa_hint", "hint" in result ? (result.hint ?? "") : "");
     saveSql();
     refreshPages();
-    redirect("/conexion?paso=mfa");
+    redirect(connectionTarget(formData, { paso: "mfa" }));
   }
   saveSql();
   refreshPages();
-  if (!result.ok) redirect(`/conexion?error=${result.code}`);
+  if (!result.ok) redirect(connectionTarget(formData, { error: result.code }));
   redirect("/");
 }
 
@@ -75,8 +84,16 @@ export async function mfaAction(formData: FormData) {
   const result = await submitCode(sql, code);
   saveSql();
   refreshPages();
-  if (!result.ok) redirect(`/conexion?paso=mfa&error=${result.code}`);
+  if (!result.ok) redirect(connectionTarget(formData, { paso: "mfa", error: result.code }));
   redirect("/");
+}
+
+export async function cancelMfaAction(formData: FormData) {
+  const sql = await getSql();
+  clearPendingAuth(sql);
+  saveSql();
+  refreshPages();
+  redirect(connectionTarget(formData));
 }
 
 export async function setLocaleAction(formData: FormData) {
@@ -107,7 +124,7 @@ export async function wishlistAction(skinId: string, name: string, wished: boole
 export async function addCatalogSkinAction(skinId: string) {
   const sql = await getSql();
   const skin = (await readStoreCatalog(sql)).skins.find((item) => item.skinId === skinId.toLowerCase() && item.tier);
-  if (!skin) return;
+  if (!skin) return { ok: false as const };
   rememberCatalogSkin(sql, {
     skinId: skin.skinId,
     levelId: skin.levelIds[0] ?? null,
@@ -120,6 +137,7 @@ export async function addCatalogSkinAction(skinId: string) {
   await cacheImages(sql);
   saveSql();
   refreshPages();
+  return { ok: true as const };
 }
 
 export async function removeWishlistAction(id: number) {
