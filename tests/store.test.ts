@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
 import { getBundleList, getHistory, getHome, getWishlist } from "@/domain/queries";
-import { addWishlist, getAccount, needsSessionChoice, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
+import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -170,12 +170,5 @@ describe("store", () => {
     const again = addWishlist(sql, { skinId: demoSkins.vandalPrime.skinId, name: "Vándalo Prime" }, now);
     expect(again).toEqual({ ok: false, reason: "owned" });
     expect(getHome(sql, now).currentCycle?.offers[0].wished).toBe(false);
-  });
-
-  it("asks for the session only before a reader is chosen", () => {
-    expect(needsSessionChoice("unset")).toBe(true);
-    expect(needsSessionChoice("unset", true)).toBe(false);
-    expect(needsSessionChoice("lockfile")).toBe(false);
-    expect(needsSessionChoice("remote")).toBe(false);
   });
 });

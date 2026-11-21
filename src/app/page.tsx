@@ -6,7 +6,7 @@ import { OfferCard } from "@/components/offer-card";
 import { RefreshButton, RefreshOnOpen } from "@/components/refresh-on-open";
 import { Button } from "@/components/ui/button";
 import { getHome } from "@/domain/queries";
-import { getAccount, getSettings } from "@/domain/store";
+import { getAccount } from "@/domain/store";
 import { formatWhen } from "@/domain/text";
 import { getSql } from "@/server/db";
 import { lastRefresh } from "@/server/refresh";
@@ -15,24 +15,18 @@ export default async function HomePage() {
   const sql = await getSql();
   const now = new Date();
   const home = getHome(sql, now);
-  const settings = getSettings(sql);
   const account = getAccount(sql);
   const refresh = lastRefresh(sql);
-  const fixtureMode = process.env.VALORANT_READER === "fixture";
-  const canRefresh = settings.reader !== "unset" || fixtureMode;
   return (
     <div className="grid gap-10">
-      <RefreshOnOpen enabled={canRefresh} refreshedAt={refresh.at} />
+      <RefreshOnOpen enabled refreshedAt={refresh.at} />
       {!home.currentCycle && home.currentBundles.length === 0 ? (
         <section className="rounded-3xl border border-white/10 bg-[#141922] p-6">
           <h1 className="text-2xl font-semibold">La primera tienda todavía no está</h1>
           <p className="mt-3 max-w-2xl text-zinc-300">
-            Esta pantalla espera la primera tienda. El historial empieza en esa lectura: lo anterior no está, y no se carga a mano.
+            Abrí el Riot Client en esta máquina. El historial empieza en la primera lectura: lo anterior no está, y no se carga a mano.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button asChild variant="primary">
-              <Link href="/conexion">Elegir cómo leerla</Link>
-            </Button>
             <form action={loadExampleAction}>
               <Button type="submit">Cargar la tienda de ejemplo</Button>
             </form>
@@ -51,7 +45,7 @@ export default async function HomePage() {
             <p>
               Vence el {formatWhen(home.currentCycle.expiresAt)} · <Remaining expiresAt={home.currentCycle.expiresAt} serverNow={now.getTime()} />
             </p>
-            {canRefresh ? <RefreshButton variant="quiet" /> : null}
+            <RefreshButton variant="quiet" />
           </div>
           {home.wishlistHits > 0 ? (
             <p className="text-sm text-amber-100">
@@ -64,7 +58,7 @@ export default async function HomePage() {
           <h1 className="text-2xl font-semibold">La última tienda ya venció</h1>
           <p className="mt-2 text-zinc-300">Una tienda nueva solo aparece cuando una lectura llega.</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            {canRefresh ? <RefreshButton /> : null}
+            <RefreshButton />
             <Button asChild>
               <Link href="/historial">Ver el historial</Link>
             </Button>

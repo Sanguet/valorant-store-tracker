@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { parseAuthBody, parseRedirect } from "@/domain/auth";
 import { catalogFromValorantApi, catalogSkinsByWeapon, catalogWeapons, storeSkins, suggestCatalogSkins, tierColor } from "@/domain/catalog";
 import { toApiLanguage } from "@/domain/language";
 import { parseLockfile } from "@/domain/lockfile";
@@ -37,19 +36,6 @@ describe("parsers", () => {
       protocol: "https",
     });
     expect(parseLockfile("nope")).toBeNull();
-  });
-
-  it("reads tokens, mfa, an invalid code and a captcha from Riot auth", () => {
-    const uri = "https://playvalorant.com/opt_in#access_token=aaa&id_token=bbb&expires_in=3600";
-    expect(parseRedirect(uri)?.accessToken).toBe("aaa");
-    expect(parseAuthBody({ type: "response", response: { parameters: { uri } } }).kind).toBe("tokens");
-    expect(parseAuthBody({ type: "multifactor", multifactor: { method: "email", email: "i***@mail.com" } })).toMatchObject({
-      kind: "mfa",
-      method: "email",
-      hint: "i***@mail.com",
-    });
-    expect(parseAuthBody({ type: "multifactor", error: "invalid_code" }).kind).toBe("invalid-code");
-    expect(parseAuthBody({ type: "auth", error: "auth_failure", captcha: { type: "hcaptcha" } }).kind).toBe("captcha");
   });
 
   it("tries storefront v3 and falls back to v2 only on 404", async () => {

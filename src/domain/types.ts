@@ -1,6 +1,6 @@
 export type ReaderSource = "lockfile" | "remote" | "fixture";
 export type OfferNote = "bought" | "passed";
-export type ReaderChoice = "unset" | "lockfile" | "remote";
+export type ReaderChoice = "lockfile";
 
 export interface SnapshotOffer {
   levelId: string;

@@ -3,8 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toApiLanguage } from "@/domain/language";
-import { setMeta } from "@/domain/meta";
-import { clearPendingAuth } from "@/domain/session";
 import {
   addWishlist,
   rememberCatalogSkin,
@@ -14,24 +12,15 @@ import {
   setBundleNote,
   setLocale,
   setOfferNote,
-  setReader,
 } from "@/domain/store";
 import type { OfferNote } from "@/domain/types";
 import { getSql, saveSql } from "@/server/db";
 import { loadExample, refreshStore } from "@/server/refresh";
 import { cacheImages } from "@/server/images";
-import { readStoreCatalog, signIn, submitCode } from "@/server/valorant";
+import { readStoreCatalog } from "@/server/valorant";
 
 function refreshPages() {
   revalidatePath("/", "layout");
-}
-
-function connectionTarget(formData: FormData, extra?: Record<string, string>) {
-  const params = new URLSearchParams();
-  if (String(formData.get("entrada") ?? "") === "1") params.set("entrada", "1");
-  for (const [key, value] of Object.entries(extra ?? {})) params.set(key, value);
-  const query = params.toString();
-  return query ? `/conexion?${query}` : "/conexion";
 }
 
 export async function refreshAction() {
@@ -46,62 +35,6 @@ export async function loadExampleAction() {
   refreshPages();
   if (!result.ok) redirect("/conexion?error=ejemplo");
   redirect("/");
-}
-
-export async function chooseReaderAction(formData: FormData) {
-  const reader = String(formData.get("reader") ?? "");
-  if (reader !== "lockfile" && reader !== "remote") return;
-  const sql = await getSql();
-  setReader(sql, reader);
-  saveSql();
-  refreshPages();
-  if (reader === "lockfile") redirect("/");
-  redirect("/conexion?entrada=1");
-}
-
-export async function loginAction(formData: FormData) {
-  const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  if (!username || !password) redirect(connectionTarget(formData, { error: "auth" }));
-  const sql = await getSql();
-  const result = await signIn(sql, username, password);
-  if (result.ok || result.code === "mfa") setReader(sql, "remote");
-  if (!result.ok && result.code === "mfa") {
-    setMeta(sql, "mfa_hint", "hint" in result ? (result.hint ?? "") : "");
-    setMeta(sql, "mfa_method", "method" in result ? (result.method ?? "") : "");
-    saveSql();
-    refreshPages();
-    redirect(connectionTarget(formData, { paso: "mfa" }));
-  }
-  saveSql();
-  refreshPages();
-  if (!result.ok) redirect(connectionTarget(formData, { error: result.code }));
-  redirect("/");
-}
-
-export async function mfaAction(formData: FormData) {
-  const code = String(formData.get("code") ?? "").trim();
-  const sql = await getSql();
-  const result = await submitCode(sql, code);
-  if (!result.ok && result.code === "mfa" && "hint" in result) {
-    setMeta(sql, "mfa_hint", result.hint ?? "");
-    setMeta(sql, "mfa_method", result.method ?? "");
-    saveSql();
-    refreshPages();
-    redirect(connectionTarget(formData, { paso: "mfa" }));
-  }
-  saveSql();
-  refreshPages();
-  if (!result.ok) redirect(connectionTarget(formData, { paso: "mfa", error: result.code }));
-  redirect("/");
-}
-
-export async function cancelMfaAction(formData: FormData) {
-  const sql = await getSql();
-  clearPendingAuth(sql);
-  saveSql();
-  refreshPages();
-  redirect(connectionTarget(formData));
 }
 
 export async function setLocaleAction(formData: FormData) {

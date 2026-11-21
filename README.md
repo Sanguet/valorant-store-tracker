@@ -15,10 +15,7 @@ La app escucha en `http://127.0.0.1:3000`.
 
 ## Cómo se lee la tienda
 
-En Conexión se elige una vía. Si esa falla, la app no salta a la otra.
-
-- **Cliente local.** El Riot Client está abierto en esta máquina. Se lee el lockfile y no se guarda la contraseña.
-- **Inicio de sesión de Riot.** El login se completa en el servidor de esta app. La contraseña no se guarda. La sesión queda en `data/`, que no se versiona.
+La única vía es el Riot Client abierto en esta máquina. La app lee el lockfile. No hay usuario ni contraseña.
 
 Los nombres y las imágenes salen de valorant-api.com, en el idioma del cliente. Las imágenes se guardan en disco.
 

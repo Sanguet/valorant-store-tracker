@@ -3,15 +3,11 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import path from "node:path";
-import { parseRedirect } from "@/domain/auth";
-import { beginRemoteLogin, continueRemoteLogin, type AuthExchange } from "@/domain/riot-login";
 import { catalogFromValorantApi, expandOwnedIds, indexCatalog, SKIN_ITEM_TYPE, type Catalog } from "@/domain/catalog";
-import { cookieHeader, rememberSetCookie } from "@/domain/cookies";
-import { toApiLanguage, toRiotLanguage } from "@/domain/language";
+import { toApiLanguage } from "@/domain/language";
 import { parseLockfile } from "@/domain/lockfile";
 import { getMeta, setMeta } from "@/domain/meta";
 import { probeStorefront, StorefrontRequestError } from "@/domain/probe";
-import { clearPendingAuth, getPendingAuth, getRemoteSession, savePendingAuth, saveRemoteSession, type RemoteSession } from "@/domain/session";
 import { clientVersionFromLog, SHARDS, shardForRegion, shardFromLog } from "@/domain/shard";
 import { parseStorefront } from "@/domain/storefront";
 import { getSettings } from "@/domain/store";
@@ -20,9 +16,6 @@ import type { Snapshot } from "@/domain/types";
 
 const CLIENT_PLATFORM =
   "ew0KCSJwbGF0Zm9ybVR5cGUiOiAiUEMiLA0KCSJwbGF0Zm9ybU9TIjogIldpbmRvd3MiLA0KCSJwbGF0Zm9ybU9TVmVyc2lvbiI6ICIxMC4wLjE5MDQyLjEuMjU2LjY0Yml0IiwNCgkicGxhdGZvcm1DaGlwc2V0IjogIlVua25vd24iDQp9";
-const RIOT_UA = "RiotClient/63.0.9.4909983.4789131 rso-auth (Windows;10;;Professional, x64)";
-const REAUTH_URL =
-  "https://auth.riotgames.com/authorize?redirect_uri=https%3A%2F%2Fplayvalorant.com%2Fopt_in&client_id=play-valorant-web-prod&response_type=token%20id_token&nonce=1&scope=account%20openid";
 
 export interface ReadSuccess {
   ok: true;
@@ -38,46 +31,13 @@ export interface ReadFailure {
   message: string;
 }
 
-export type LoginResult =
-  | { ok: true }
-  | { ok: false; code: "mfa"; hint: string | null; method: string | null }
-  | { ok: false; code: string; message: string };
-
-function authExchange(userAgent: string): AuthExchange {
-  return (method, url, body, cookies) => {
-    const jar = new Map(Object.entries(cookies));
-    return riotFetch(jar, method, url, body, userAgent).then((response) => ({
-      status: response.status,
-      body: response.body,
-      cookies: Object.fromEntries(jar),
-    }));
-  };
-}
-
-async function remoteClient(): Promise<{ userAgent: string; sdkVersion: string }> {
-  const fallback = { userAgent: RIOT_UA, sdkVersion: "23.8.0.1382" };
-  try {
-    const response = await fetchJson("https://valorant-api.com/v1/version");
-    const build = (response.body as { data?: { riotClientBuild?: string } } | null)?.data?.riotClientBuild;
-    if (!build) return fallback;
-    return { userAgent: `RiotClient/${build} rso-auth (Windows;10;;Professional, x64)`, sdkVersion: fallback.sdkVersion };
-  } catch {
-    return fallback;
-  }
-}
-
 const MESSAGES = {
   "no-client": "No encontré el Riot Client en esta máquina. Abrilo e iniciá sesión, y volvé a leer.",
   "no-session": "El Riot Client está, pero no pude tomar la sesión. Tiene que estar iniciado.",
-  unauthorized: "Riot rechazó la sesión. Volvé a iniciar sesión.",
-  captcha: "Riot pidió un captcha. Esta app no lo puede resolver. Usá el Riot Client abierto en esta máquina.",
-  auth: "No pude iniciar sesión. Revisá el usuario y la contraseña.",
-  "mfa-invalid": "El código no sirve. Probá de nuevo.",
+  unauthorized: "Riot rechazó la sesión. Volvé a iniciar sesión en el cliente.",
   region: "No pude resolver la región de la cuenta.",
   storefront: "No pude leer la tienda.",
   version: "No pude saber la versión del cliente.",
-  "no-login": "Iniciá sesión para leer la tienda.",
-  expired: "La sesión venció. Volvé a iniciar sesión.",
 } as const;
 
 function failure(code: keyof typeof MESSAGES): ReadFailure {
@@ -375,177 +335,3 @@ export async function readLockfile(sql: Sql): Promise<ReadSuccess | ReadFailure>
   return result;
 }
 
-async function riotFetch(jar: Map<string, string>, method: string, url: string, body?: unknown, userAgent = RIOT_UA) {
-  const headers = new Headers();
-  headers.set("User-Agent", userAgent);
-  headers.set("Referer", "https://auth.riotgames.com/");
-  headers.set("Accept", "application/json");
-  const cookie = cookieHeader(jar);
-  if (cookie) headers.set("Cookie", cookie);
-  if (body !== undefined) headers.set("Content-Type", "application/json");
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-    redirect: "manual",
-    signal: AbortSignal.timeout(15000),
-  });
-  rememberSetCookie(jar, typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : []);
-  const text = await response.text();
-  let parsed: unknown = null;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = null;
-    }
-  }
-  return { status: response.status, body: parsed, location: response.headers.get("location") };
-}
-
-async function finishLogin(sql: Sql, jar: Map<string, string>, accessToken: string, idToken: string, expiresIn: number): Promise<LoginResult> {
-  const entitlement = await fetchJson("https://entitlements.auth.riotgames.com/api/token/v1", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: "{}",
-  });
-  const entitlementToken = (entitlement.body as { entitlements_token?: string } | null)?.entitlements_token;
-  if (!entitlementToken) return { ok: false, code: "auth", message: MESSAGES.auth };
-  const user = await fetchJson("https://auth.riotgames.com/userinfo", { headers: { Authorization: `Bearer ${accessToken}` } });
-  const userBody = user.body as { sub?: string; acct?: { game_name?: string; tag_line?: string } } | null;
-  if (!userBody?.sub) return { ok: false, code: "auth", message: MESSAGES.auth };
-  const geo = await fetchJson("https://riot-geo.pas.si.riotgames.com/pas/v1/product/valorant", {
-    method: "PUT",
-    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ id_token: idToken }),
-  });
-  const region = (geo.body as { affinities?: { live?: string } } | null)?.affinities?.live ?? null;
-  const shard = shardForRegion(region);
-  if (!shard) return { ok: false, code: "region", message: MESSAGES.region };
-  saveRemoteSession(sql, {
-    accessToken,
-    idToken,
-    entitlement: entitlementToken,
-    cookies: Object.fromEntries(jar),
-    puuid: userBody.sub.toLowerCase(),
-    shard,
-    region,
-    gameName: userBody.acct?.game_name ?? null,
-    tagLine: userBody.acct?.tag_line ?? null,
-    expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
-    storefrontVersion: null,
-  });
-  clearPendingAuth(sql);
-  return { ok: true };
-}
-
-export async function signIn(sql: Sql, username: string, password: string): Promise<LoginResult> {
-  const locale = toRiotLanguage(getSettings(sql).locale);
-  const client = await remoteClient();
-  const stop = await beginRemoteLogin(authExchange(client.userAgent), { username, password, language: locale, sdkVersion: client.sdkVersion });
-  if (stop.step === "mfa") {
-    savePendingAuth(sql, stop.cookies, new Date());
-    return { ok: false, code: "mfa", hint: stop.hint, method: stop.method };
-  }
-  if (stop.step === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
-  if (stop.step === "tokens") {
-    return finishLogin(sql, new Map(Object.entries(stop.cookies)), stop.tokens.accessToken, stop.tokens.idToken, stop.tokens.expiresIn);
-  }
-  return { ok: false, code: "auth", message: MESSAGES.auth };
-}
-
-export async function submitCode(sql: Sql, code: string): Promise<LoginResult> {
-  const pending = getPendingAuth(sql, new Date());
-  if (!pending) return { ok: false, code: "mfa-invalid", message: MESSAGES["mfa-invalid"] };
-  const client = await remoteClient();
-  const stop = await continueRemoteLogin(authExchange(client.userAgent), pending.cookies, code);
-  if (stop.step === "captcha") return { ok: false, code: "captcha", message: MESSAGES.captcha };
-  if (stop.step === "mfa") {
-    savePendingAuth(sql, stop.cookies, new Date());
-    return { ok: false, code: "mfa", hint: stop.hint, method: stop.method };
-  }
-  if (stop.step === "tokens") {
-    return finishLogin(sql, new Map(Object.entries(stop.cookies)), stop.tokens.accessToken, stop.tokens.idToken, stop.tokens.expiresIn);
-  }
-  return { ok: false, code: "mfa-invalid", message: MESSAGES["mfa-invalid"] };
-}
-
-async function refreshSession(session: RemoteSession): Promise<RemoteSession | null> {
-  const jar = new Map(Object.entries(session.cookies));
-  const response = await fetch(REAUTH_URL, {
-    headers: { Cookie: cookieHeader(jar), "User-Agent": RIOT_UA },
-    redirect: "manual",
-    signal: AbortSignal.timeout(15000),
-  });
-  rememberSetCookie(jar, typeof response.headers.getSetCookie === "function" ? response.headers.getSetCookie() : []);
-  const tokens = parseRedirect(response.headers.get("location") ?? "");
-  if (!tokens) return null;
-  const entitlement = await fetchJson("https://entitlements.auth.riotgames.com/api/token/v1", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${tokens.accessToken}`, "Content-Type": "application/json" },
-    body: "{}",
-  });
-  const entitlementToken = (entitlement.body as { entitlements_token?: string } | null)?.entitlements_token;
-  if (!entitlementToken) return null;
-  return {
-    ...session,
-    accessToken: tokens.accessToken,
-    idToken: tokens.idToken,
-    entitlement: entitlementToken,
-    cookies: Object.fromEntries(jar),
-    expiresAt: new Date(Date.now() + tokens.expiresIn * 1000).toISOString(),
-  };
-}
-
-export async function readRemote(sql: Sql): Promise<ReadSuccess | ReadFailure> {
-  let session = getRemoteSession(sql);
-  if (!session) return failure("no-login");
-  if (new Date(session.expiresAt).getTime() - Date.now() < 60_000) {
-    const refreshed = await refreshSession(session).catch(() => null);
-    if (!refreshed) return failure("expired");
-    session = refreshed;
-    saveRemoteSession(sql, session);
-  }
-  const version = await clientVersion(sql, "");
-  if (!version) return failure("version");
-  const settings = getSettings(sql);
-  const catalog = await loadCatalog(toApiLanguage(settings.locale));
-  const headers = pdHeaders(session.accessToken, session.entitlement, version);
-  let storefront: { version: "v2" | "v3"; body: unknown };
-  try {
-    storefront = await requestStorefront(session.shard, session.puuid, headers, session.storefrontVersion);
-  } catch (error) {
-    if (error instanceof StorefrontRequestError && error.code === "unauthorized") {
-      const refreshed = await refreshSession(session).catch(() => null);
-      if (!refreshed) return failure("expired");
-      saveRemoteSession(sql, refreshed);
-      try {
-        const retryHeaders = pdHeaders(refreshed.accessToken, refreshed.entitlement, version);
-        storefront = await requestStorefront(refreshed.shard, refreshed.puuid, retryHeaders, refreshed.storefrontVersion);
-        session = refreshed;
-      } catch {
-        return failure("unauthorized");
-      }
-    } else {
-      return failure("storefront");
-    }
-  }
-  const names = session.gameName ? { gameName: session.gameName, tagLine: session.tagLine } : await fetchNames(session.shard, session.puuid, headers);
-  const owned = await fetchOwned(session.shard, session.puuid, headers);
-  const result = buildSnapshot({
-    source: "remote",
-    puuid: session.puuid,
-    gameName: names.gameName,
-    tagLine: names.tagLine,
-    region: session.region,
-    shard: session.shard,
-    catalog,
-    storefront: storefront.body,
-    owned,
-  });
-  result.storefrontVersion = storefront.version;
-  result.locale = toApiLanguage(settings.locale);
-  saveRemoteSession(sql, { ...session, storefrontVersion: storefront.version, gameName: names.gameName, tagLine: names.tagLine });
-  setMeta(sql, "storefront_version", storefront.version);
-  return result;
-}

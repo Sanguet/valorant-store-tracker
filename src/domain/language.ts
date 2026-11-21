@@ -56,7 +56,3 @@ export function toApiLanguage(locale: string | null | undefined): string {
   const match = [...API_LANGUAGES].find((language) => language.toLowerCase().startsWith(`${base}-`));
   return match ?? "en-US";
 }
-
-export function toRiotLanguage(locale: string): string {
-  return toApiLanguage(locale).replace("-", "_");
-}

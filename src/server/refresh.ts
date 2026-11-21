@@ -1,11 +1,11 @@
 import "server-only";
 import { loadFixture } from "@/domain/fixture";
 import { getMeta, setMeta } from "@/domain/meta";
-import { getSettings, recordSnapshot, setLocale } from "@/domain/store";
+import { getSettings, recordSnapshot, setLocale, setReader } from "@/domain/store";
 import type { Sql } from "@/domain/sql";
 import { cacheImages } from "@/server/images";
 import { saveSql } from "@/server/db";
-import { readLockfile, readRemote, type ReadFailure, type ReadSuccess } from "@/server/valorant";
+import { readLockfile, type ReadFailure, type ReadSuccess } from "@/server/valorant";
 
 export interface RefreshResult {
   ok: boolean;
@@ -48,12 +48,8 @@ async function finish(sql: Sql, read: ReadSuccess | ReadFailure): Promise<Refres
 export async function refreshStore(sql: Sql): Promise<RefreshResult> {
   try {
     if (process.env.VALORANT_READER === "fixture") return loadExample(sql);
-    const settings = getSettings(sql);
-    if (settings.reader === "lockfile") return finish(sql, await readLockfile(sql));
-    if (settings.reader === "remote") return finish(sql, await readRemote(sql));
-    const result = { ok: false, message: "" };
-    remember(sql, result);
-    return result;
+    setReader(sql, "lockfile");
+    return finish(sql, await readLockfile(sql));
   } catch {
     const result = { ok: false, message: "No pude leer la tienda." };
     remember(sql, result);
