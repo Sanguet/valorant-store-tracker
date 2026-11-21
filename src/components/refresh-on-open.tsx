@@ -18,12 +18,12 @@ export function RefreshOnOpen({ enabled, refreshedAt }: { enabled: boolean; refr
   return null;
 }
 
-export function RefreshButton() {
+export function RefreshButton({ variant = "primary" }: { variant?: "primary" | "quiet" }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   return (
     <Button
-      variant="primary"
+      variant={variant}
       disabled={pending}
       onClick={() => start(async () => {
         await refreshAction();

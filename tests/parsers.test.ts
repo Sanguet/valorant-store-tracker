@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseAuthBody, parseRedirect } from "@/domain/auth";
-import { catalogFromValorantApi, catalogSkinsByWeapon, catalogWeapons, storeSkins, suggestCatalogSkins } from "@/domain/catalog";
+import { catalogFromValorantApi, catalogSkinsByWeapon, catalogWeapons, storeSkins, suggestCatalogSkins, tierColor } from "@/domain/catalog";
 import { toApiLanguage } from "@/domain/language";
 import { parseLockfile } from "@/domain/lockfile";
 import { probeStorefront, StorefrontRequestError } from "@/domain/probe";
@@ -112,6 +112,7 @@ describe("parsers", () => {
       weapons: [
         {
           displayName: "Vándalo",
+          displayIcon: "https://media.valorant-api.com/weapons/vandal.png",
           skins: [
             {
               uuid: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAA1",
@@ -133,6 +134,13 @@ describe("parsers", () => {
       tier: "premium",
     });
     expect(catalog.bundles[0].name).toBe("Lote Prime");
+    expect(catalog.weapons?.[0]).toEqual({ name: "Vándalo", imageUrl: "https://media.valorant-api.com/weapons/vandal.png" });
+    expect(tierColor("Edición prémium")).toBe("#d1548d");
+    expect(tierColor("Edición de lujo")).toBe("#009587");
+    expect(tierColor("Edición selecta")).toBe("#5a9fe2");
+    expect(tierColor("Edición exclusiva")).toBe("#f5955b");
+    expect(tierColor("Edición ultra")).toBe("#fad663");
+    expect(tierColor(null)).toBeNull();
   });
 
   it("suggests catalog skins by a partial name and filters a weapon by edition", () => {

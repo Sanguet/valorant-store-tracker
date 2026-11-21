@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
-import { getBundleList, getHistory, getHome, getWishlist, searchSkins } from "@/domain/queries";
-import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
+import { getBundleList, getHistory, getHome, getWishlist } from "@/domain/queries";
+import { addWishlist, getAccount, needsSessionChoice, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -132,18 +132,6 @@ describe("store", () => {
     expect(item.weaponName).toBeNull();
   });
 
-  it("searches daily offers and bundles, and says when nothing was recorded", async () => {
-    const sql = await memorySql();
-    loadFixture(sql, now);
-    const knife = searchSkins(sql, "cuchillo");
-    expect(knife?.map((skin) => skin.name).sort()).toEqual(["Cuchillo RGX", "Cuchillo Reaver"]);
-    const vandal = searchSkins(sql, "vandal");
-    expect(vandal?.[0].appearances.map((appearance) => appearance.kind).sort()).toEqual(["bundle", "daily"]);
-    expect(vandal?.[0].appearances.every((appearance) => appearance.href.startsWith("/"))).toBe(true);
-    expect(searchSkins(sql, "odin")).toEqual([]);
-    expect(searchSkins(sql, "   ")).toBeNull();
-  });
-
   it("keeps weapon and edition for a catalog skin that has not appeared yet", async () => {
     const sql = await memorySql();
     rememberCatalogSkin(sql, {
@@ -170,5 +158,12 @@ describe("store", () => {
     expect(item.skinId).toBe(demoSkins.vandalPrime.skinId);
     expect(item.seen).toBe(true);
     expect(item.weaponName).toBe("Vándalo");
+  });
+
+  it("asks for the session only before a reader is chosen", () => {
+    expect(needsSessionChoice("unset")).toBe(true);
+    expect(needsSessionChoice("unset", true)).toBe(false);
+    expect(needsSessionChoice("lockfile")).toBe(false);
+    expect(needsSessionChoice("remote")).toBe(false);
   });
 });

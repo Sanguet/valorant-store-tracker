@@ -1,7 +1,7 @@
 import { WishlistPicker } from "@/components/wishlist-picker";
 import { RemoveWishlistButton } from "@/components/wishlist-button";
 import { SkinImage } from "@/components/skin-image";
-import { storeSkins } from "@/domain/catalog";
+import { storeSkins, weaponChoices } from "@/domain/catalog";
 import { getWishlist } from "@/domain/queries";
 import { formatWhen } from "@/domain/text";
 import { getSql } from "@/server/db";
@@ -10,7 +10,8 @@ import { readStoreCatalog } from "@/server/valorant";
 export default async function WishlistPage() {
   const sql = await getSql();
   const items = getWishlist(sql, new Date());
-  const skins = storeSkins(await readStoreCatalog(sql));
+  const catalog = await readStoreCatalog(sql);
+  const skins = storeSkins(catalog);
   return (
     <div className="grid gap-6">
       <div>
@@ -19,7 +20,7 @@ export default async function WishlistPage() {
           La coincidencia se ve al abrir la app. La lista no avisa por otro medio.
         </p>
       </div>
-      <WishlistPicker skins={skins} wishedIds={items.flatMap((item) => (item.skinId ? [item.skinId] : []))} />
+      <WishlistPicker skins={skins} weapons={weaponChoices(catalog)} wishedIds={items.flatMap((item) => (item.skinId ? [item.skinId] : []))} />
       {items.length === 0 ? <p className="text-zinc-300">La lista está vacía. Sumá una skin desde la tienda, desde un lote, o desde el catálogo.</p> : null}
       <ul className="grid gap-3">
         {items.map((item) => (

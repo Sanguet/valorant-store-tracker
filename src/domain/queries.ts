@@ -69,7 +69,7 @@ export interface AppearanceView {
   href: string;
 }
 
-export interface SkinSummary {
+interface SkinSummary {
   key: string;
   skinId: string | null;
   name: string;
@@ -369,34 +369,6 @@ function summaryFrom(rows: AppearanceRow[], key: string, skinId: string | null, 
     appearances,
     lastAppearance: appearances[0] ?? null,
   };
-}
-
-function likeTerm(query: string): string {
-  return `%${query.replace(/[\\%_]/g, "\\$&")}%`;
-}
-
-export function searchSkins(sql: Sql, query: string): SkinSummary[] | null {
-  const folded = fold(query);
-  if (!folded) return null;
-  const like = likeTerm(folded);
-  const flags = flagsOf(sql);
-  const offerHits = sql.all<{ skin_id: string | null; name_fold: string }>(
-    "SELECT skin_id, name_fold FROM offers WHERE name_fold LIKE ? ESCAPE '\\' OR weapon_fold LIKE ? ESCAPE '\\'",
-    [like, like],
-  );
-  const bundleHits = sql.all<{ skin_id: string | null; name_fold: string }>(
-    "SELECT skin_id, name_fold FROM bundle_skins WHERE name_fold LIKE ? ESCAPE '\\' OR weapon_fold LIKE ? ESCAPE '\\'",
-    [like, like],
-  );
-  const keys = new Map<string, { skinId: string | null; nameFold: string }>();
-  for (const hit of [...offerHits, ...bundleHits]) {
-    const skinId = text(hit.skin_id);
-    const key = skinId ? `id:${skinId}` : `name:${hit.name_fold}`;
-    keys.set(key, { skinId, nameFold: String(hit.name_fold) });
-  }
-  const summaries = [...keys.entries()].map(([key, hit]) => summaryFrom(appearanceRows(sql, hit.skinId, hit.nameFold), key, hit.skinId, hit.nameFold, flags));
-  summaries.sort((a, b) => (a.lastAppearance?.expiresAt ?? "") < (b.lastAppearance?.expiresAt ?? "") ? 1 : -1);
-  return summaries;
 }
 
 interface Presence {

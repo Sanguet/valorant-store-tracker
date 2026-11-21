@@ -164,7 +164,8 @@ async function loadCatalog(language: string): Promise<Catalog> {
   if (fs.existsSync(file)) {
     try {
       const cached = JSON.parse(fs.readFileSync(file, "utf8")) as { fetchedAt: string; catalog: Catalog };
-      if (fresh(cached.fetchedAt) && cached.catalog.skins.some((skin) => skin.tier)) return cached.catalog;
+      const hasWeapons = (cached.catalog.weapons?.length ?? 0) > 0;
+      if (fresh(cached.fetchedAt) && cached.catalog.skins.some((skin) => skin.tier) && hasWeapons) return cached.catalog;
     } catch {
       // A bad cache is ignored and fetched again.
     }

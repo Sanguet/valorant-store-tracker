@@ -9,7 +9,6 @@ const LINKS = [
   { href: "/historial", label: "Historial" },
   { href: "/lotes", label: "Lotes" },
   { href: "/deseos", label: "Deseos" },
-  { href: "/buscar", label: "Buscar" },
 ];
 
 export function Header({ account }: { account: string }) {

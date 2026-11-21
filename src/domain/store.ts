@@ -32,6 +32,10 @@ function sameIds(left: string[], right: string[]): boolean {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
+export function needsSessionChoice(reader: ReaderChoice, fixtureMode = false): boolean {
+  return reader === "unset" && !fixtureMode;
+}
+
 export function getSettings(sql: Sql): Settings {
   const row = sql.get<{ reader: string; locale: string; locale_locked: number }>("SELECT reader, locale, locale_locked FROM settings WHERE id = 1");
   const reader: ReaderChoice = row?.reader === "lockfile" || row?.reader === "remote" ? row.reader : "unset";

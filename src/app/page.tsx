@@ -21,18 +21,8 @@ export default async function HomePage() {
   const fixtureMode = process.env.VALORANT_READER === "fixture";
   const canRefresh = settings.reader !== "unset" || fixtureMode;
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-10">
       <RefreshOnOpen enabled={canRefresh} refreshedAt={refresh.at} />
-      {account?.isFixture ? (
-        <p className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
-          Estás viendo la tienda de ejemplo, no la de tu cuenta.
-        </p>
-      ) : null}
-      {refresh.message ? (
-        <p className={`rounded-2xl border px-4 py-3 text-sm ${refresh.ok ? "border-white/10 bg-white/5" : "border-[#ff4655]/40 bg-[#ff4655]/10"}`}>
-          {refresh.message}
-        </p>
-      ) : null}
       {!home.currentCycle && home.currentBundles.length === 0 ? (
         <section className="rounded-3xl border border-white/10 bg-[#141922] p-6">
           <h1 className="text-2xl font-semibold">La primera tienda todavía no está</h1>
@@ -51,25 +41,23 @@ export default async function HomePage() {
       ) : null}
       {home.currentCycle ? (
         <section className="grid gap-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold">Tienda de hoy</h1>
-              <p className="text-sm text-zinc-400">
-                Vence el {formatWhen(home.currentCycle.expiresAt)} · quedan <Countdown expiresAt={home.currentCycle.expiresAt} />
-              </p>
-              {home.wishlistHits > 0 ? (
-                <p className="mt-1 text-sm text-amber-100">
-                  {home.wishlistHits === 1 ? "Hay 1 skin de tu lista en la tienda o en un lote." : `Hay ${home.wishlistHits} skins de tu lista en la tienda o en un lote.`}
-                </p>
-              ) : null}
-            </div>
-            {canRefresh ? <RefreshButton /> : null}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <h1 className="sr-only">Tienda de hoy</h1>
+          <div className="grid gap-5 sm:grid-cols-2">
             {home.currentCycle.offers.map((offer) => (
-              <OfferCard key={offer.id} offer={offer} />
+              <OfferCard key={offer.id} offer={offer} large />
             ))}
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
+            <p>
+              Vence el {formatWhen(home.currentCycle.expiresAt)} · quedan <Countdown expiresAt={home.currentCycle.expiresAt} />
+            </p>
+            {canRefresh ? <RefreshButton variant="quiet" /> : null}
+          </div>
+          {home.wishlistHits > 0 ? (
+            <p className="text-sm text-amber-100">
+              {home.wishlistHits === 1 ? "Hay 1 skin de tu lista en la tienda o en un lote." : `Hay ${home.wishlistHits} skins de tu lista en la tienda o en un lote.`}
+            </p>
+          ) : null}
         </section>
       ) : home.hasHistory ? (
         <section className="rounded-3xl border border-white/10 p-6">
@@ -83,9 +71,19 @@ export default async function HomePage() {
           </div>
         </section>
       ) : null}
+      {account?.isFixture ? (
+        <p className="rounded-2xl border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">
+          Estás viendo la tienda de ejemplo, no la de tu cuenta.
+        </p>
+      ) : null}
+      {refresh.message ? (
+        <p className={`rounded-2xl border px-4 py-3 text-sm ${refresh.ok ? "border-white/10 bg-white/5" : "border-[#ff4655]/40 bg-[#ff4655]/10"}`}>
+          {refresh.message}
+        </p>
+      ) : null}
       {home.currentBundles.length > 0 ? (
-        <section className="grid gap-4">
-          <h2 className="text-xl font-semibold">Lotes destacados</h2>
+        <section className="grid gap-3 border-t border-white/10 pt-6">
+          <h2 className="text-sm font-medium text-zinc-400">Lotes destacados</h2>
           {home.currentBundles.map((bundle) => (
             <BundlePanel key={bundle.id} bundle={bundle} linked />
           ))}

@@ -47,9 +47,20 @@ export interface CatalogBundle {
   imageUrl: string | null;
 }
 
+export interface CatalogWeapon {
+  name: string;
+  imageUrl: string | null;
+}
+
+export interface WeaponChoice {
+  name: string;
+  imageUrl: string | null;
+}
+
 export interface Catalog {
   skins: CatalogSkin[];
   bundles: CatalogBundle[];
+  weapons?: CatalogWeapon[];
 }
 
 export interface CatalogIndex {
@@ -103,6 +114,19 @@ export function offerFromSkin(itemId: string, skin: CatalogSkin | undefined, pri
   };
 }
 
+const TIER_COLORS: Record<SkinTier, string> = {
+  select: "#5a9fe2",
+  deluxe: "#009587",
+  premium: "#d1548d",
+  exclusive: "#f5955b",
+  ultra: "#fad663",
+};
+
+export function tierColor(edition: string | null | undefined): string | null {
+  const tier = tierOf(null, edition);
+  return tier ? TIER_COLORS[tier] : null;
+}
+
 export function tierOf(contentTierUuid: string | null | undefined, edition: string | null | undefined): SkinTier | null {
   const byId = contentTierUuid ? TIER_IDS[contentTierUuid.toLowerCase()] : undefined;
   if (byId) return byId;
@@ -134,6 +158,15 @@ export function suggestCatalogSkins(skins: WishlistSkin[], query: string, limit 
 
 export function catalogWeapons(skins: WishlistSkin[]): string[] {
   return [...new Set(skins.map((skin) => skin.weaponName))].sort((a, b) => a.localeCompare(b, "es"));
+}
+
+export function weaponChoices(catalog: Catalog): WeaponChoice[] {
+  const icons = new Map((catalog.weapons ?? []).map((weapon) => [weapon.name, weapon.imageUrl]));
+  const skins = storeSkins(catalog);
+  return catalogWeapons(skins).map((name) => ({
+    name,
+    imageUrl: icons.get(name) ?? skins.find((skin) => skin.weaponName === name)?.imageUrl ?? null,
+  }));
 }
 
 export function catalogSkinsByWeapon(skins: WishlistSkin[], weaponName: string, tier: SkinTier | null): WishlistSkin[] {
@@ -171,6 +204,7 @@ interface ApiSkin {
 
 interface ApiWeapon {
   displayName?: string;
+  displayIcon?: string | null;
   skins?: ApiSkin[];
 }
 
@@ -210,6 +244,9 @@ export function catalogFromValorantApi(input: {
   }
   return {
     skins,
+    weapons: input.weapons.flatMap((weapon) =>
+      weapon.displayName ? [{ name: weapon.displayName, imageUrl: weapon.displayIcon ?? null }] : [],
+    ),
     bundles: input.bundles.flatMap((bundle) =>
       bundle.uuid && bundle.displayName
         ? [{ id: bundle.uuid.toLowerCase(), name: bundle.displayName, imageUrl: bundle.displayIcon ?? bundle.verticalPromoImage ?? null }]
