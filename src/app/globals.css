@@ -26,7 +26,7 @@ summary:focus-visible {
 
 /* Normal reveal: the black cover lifts off, like opening a sleeve.
    Wishlist reveal: a gacha burst (shake, flash, ring, particles) before the cover breaks.
-   New store: one title slam, then the four covered cards. */
+   New store: one title slam. Each still-covered card replays the question-mark entrance on every visit. */
 @keyframes reveal-cover {
   0% { transform: translateY(0) rotate(0deg); }
   40% { transform: translateY(-6%) rotate(-1.5deg) scale(1.02); }
@@ -125,6 +125,86 @@ summary:focus-visible {
   animation: reveal-sheen 0.8s ease 0.25s both;
 }
 
+.reveal-mark-arrive {
+  animation: reveal-arrive 0.7s ease both;
+}
+
+.reveal-sleeve {
+  background:
+    linear-gradient(#ff4655, #ff4655) left 14px top 14px / 16px 2px no-repeat,
+    linear-gradient(#ff4655, #ff4655) left 14px top 14px / 2px 16px no-repeat,
+    linear-gradient(#ff4655, #ff4655) right 14px top 14px / 16px 2px no-repeat,
+    linear-gradient(#ff4655, #ff4655) right 14px top 14px / 2px 16px no-repeat,
+    linear-gradient(#ff4655, #ff4655) left 14px bottom 14px / 16px 2px no-repeat,
+    linear-gradient(#ff4655, #ff4655) left 14px bottom 14px / 2px 16px no-repeat,
+    linear-gradient(#ff4655, #ff4655) right 14px bottom 14px / 16px 2px no-repeat,
+    linear-gradient(#ff4655, #ff4655) right 14px bottom 14px / 2px 16px no-repeat,
+    radial-gradient(circle at 50% 46%, rgba(255, 70, 85, 0.22), transparent 42%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 13px),
+    linear-gradient(165deg, #1a1f2a, #05060a 62%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 0 0 11px rgba(0, 0, 0, 0.45);
+}
+
+.cover-mark-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 7.5rem;
+  height: 7.5rem;
+}
+
+.cover-ring {
+  position: absolute;
+  inset: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 0 22px rgba(255, 70, 85, 0.28), inset 0 0 18px rgba(255, 70, 85, 0.12);
+}
+
+.cover-mark {
+  position: relative;
+  font-size: 4.5rem;
+  font-weight: 600;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(255, 70, 85, 0.8);
+}
+
+.cover-shine {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, 0.2) 50%, transparent 64%);
+  transform: translateX(-140%);
+}
+
+.reveal-sleeve-card {
+  transition: transform 0.22s ease;
+}
+
+.reveal-sleeve-card:hover {
+  z-index: 5;
+  transform: scale(1.03);
+  cursor: pointer;
+}
+
+.reveal-sleeve-card:hover .cover-shine {
+  animation: cover-sweep 1.15s ease-in-out infinite;
+}
+
+.reveal-sleeve-card:hover .cover-ring {
+  animation: cover-pulse 1.15s ease-in-out infinite;
+}
+
+@keyframes cover-sweep {
+  0% { transform: translateX(-140%); }
+  100% { transform: translateX(140%); }
+}
+
+@keyframes cover-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(255, 70, 85, 0.2), inset 0 0 12px rgba(255, 70, 85, 0.08); }
+  50% { transform: scale(1.06); box-shadow: 0 0 26px rgba(255, 70, 85, 0.7), inset 0 0 20px rgba(255, 70, 85, 0.28); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-cover,
   .reveal-cover-wish,
@@ -133,7 +213,16 @@ summary:focus-visible {
   .reveal-flash,
   .reveal-burst,
   .reveal-particle,
-  .reveal-sheen {
+  .reveal-sheen,
+  .reveal-mark-arrive,
+  .reveal-sleeve-card:hover .cover-shine,
+  .reveal-sleeve-card:hover .cover-ring {
     animation: none;
+  }
+
+  .reveal-sleeve-card,
+  .reveal-sleeve-card:hover {
+    transform: none;
+    transition: none;
   }
 }

@@ -27,6 +27,7 @@ export function RevealCard({
   onReveal,
   onSettled,
   locked,
+  enterIndex = 0,
 }: {
   offer: OfferView;
   open: boolean;
@@ -34,15 +35,22 @@ export function RevealCard({
   onReveal: () => void;
   onSettled: () => void;
   locked: boolean;
+  enterIndex?: number;
 }) {
   const rarity = open ? tierColor(offer.edition) : null;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/15";
   const wishRing = open && offer.wished ? "ring-2 ring-emerald-400 ring-inset" : "";
-  const coverMotion = animate ? (offer.wished ? "reveal-cover-wish" : "reveal-cover") : open ? "hidden" : "";
+  const coverMotion = animate ? (offer.wished ? "reveal-cover-wish" : "reveal-cover") : open ? "hidden" : "reveal-mark-arrive";
+  const covered = !open;
 
   return (
     <article
-      className={cn("relative h-full min-h-0 overflow-hidden rounded-2xl bg-black sm:rounded-3xl", frame, wishRing)}
+      className={cn(
+        "relative h-full min-h-0 overflow-hidden rounded-2xl bg-black sm:rounded-3xl",
+        frame,
+        wishRing,
+        covered && "reveal-sleeve-card",
+      )}
       style={rarity ? { borderColor: rarity } : undefined}
     >
       <div inert={!open} aria-hidden={!open} className={cn("flex h-full min-h-0 flex-col", open ? "" : "opacity-0")}>
@@ -68,19 +76,25 @@ export function RevealCard({
         <button
           type="button"
           className={cn(
-            "absolute inset-0 flex items-center justify-center bg-black text-zinc-100",
+            "reveal-sleeve absolute inset-0 flex cursor-pointer items-center justify-center overflow-hidden text-zinc-100 disabled:cursor-pointer",
             coverMotion,
           )}
+          style={covered && !animate ? { animationDelay: `${enterIndex * 80}ms` } : undefined}
           aria-label="Revelar esta arma"
           disabled={locked}
           onClick={onReveal}
           onAnimationEnd={(event) => {
             if (event.currentTarget !== event.target || !animate) return;
+            if (event.animationName !== "reveal-cover" && event.animationName !== "reveal-cover-wish") return;
             onSettled();
           }}
         >
-          <span aria-hidden className="text-5xl font-semibold sm:text-7xl">
-            ?
+          <span className="cover-shine" aria-hidden />
+          <span className="cover-mark-wrap">
+            <span className="cover-ring" aria-hidden />
+            <span className="cover-mark" aria-hidden>
+              ?
+            </span>
           </span>
         </button>
       )}

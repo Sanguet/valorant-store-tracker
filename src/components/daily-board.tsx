@@ -98,8 +98,8 @@ export function DailyBoard({
   return (
     <section className="relative flex min-h-0 flex-1 flex-col gap-2">
       <h1 className="sr-only">Tienda de hoy</h1>
-      <div className={`grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 sm:gap-3 ${intro ? "reveal-arrive" : ""}`}>
-        {cycle.offers.slice(0, 4).map((offer) => {
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 sm:gap-3">
+        {cycle.offers.slice(0, 4).map((offer, index) => {
           const open = record?.offerIds.includes(offer.id) ?? false;
           return (
             <RevealCard
@@ -107,6 +107,7 @@ export function DailyBoard({
               offer={offer}
               open={open}
               animate={animatingId === offer.id}
+              enterIndex={index}
               onReveal={() => reveal(offer.id, offer.wished)}
               locked={intro || !ready}
               onSettled={() => {
