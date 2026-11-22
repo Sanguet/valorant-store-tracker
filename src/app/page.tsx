@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { getHome } from "@/domain/queries";
 import { getAccount } from "@/domain/store";
 import { getSql } from "@/server/db";
+import { cacheImages } from "@/server/images";
 import { lastRefresh } from "@/server/refresh";
 
 export default async function HomePage() {
   const sql = await getSql();
+  await cacheImages(sql);
   const now = new Date();
   const home = getHome(sql, now);
   const account = getAccount(sql);

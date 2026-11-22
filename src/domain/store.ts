@@ -411,6 +411,11 @@ export function setSkinImage(sql: Sql, skinId: string, file: string) {
   sql.run("UPDATE skins SET image_file = ? WHERE skin_id = ?", [file, skinId]);
 }
 
+export function clearSkinImage(sql: Sql, skinId: string, imageUrl: string | null) {
+  if (imageUrl) sql.run("UPDATE skins SET image_url = ?, image_file = NULL WHERE skin_id = ?", [imageUrl, skinId]);
+  else sql.run("UPDATE skins SET image_file = NULL WHERE skin_id = ?", [skinId]);
+}
+
 export function setBundleImage(sql: Sql, bundleId: number, file: string) {
   sql.run("UPDATE bundles SET image_file = ? WHERE id = ?", [file, bundleId]);
 }

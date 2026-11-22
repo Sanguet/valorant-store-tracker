@@ -120,6 +120,7 @@ describe("parsers", () => {
       tier: "premium",
     });
     expect(catalog.bundles[0].name).toBe("Lote Prime");
+    expect(catalog.skins[0].imageUrl).toBe("https://media.valorant-api.com/skins/icon.png");
     expect(catalog.weapons?.[0]).toEqual({ name: "Vándalo", imageUrl: "https://media.valorant-api.com/weapons/vandal.png" });
     expect(tierColor("Edición prémium")).toBe("#d1548d");
     expect(tierColor("Edición de lujo")).toBe("#009587");
@@ -127,6 +128,40 @@ describe("parsers", () => {
     expect(tierColor("Edición exclusiva")).toBe("#f5955b");
     expect(tierColor("Edición ultra")).toBe("#fad663");
     expect(tierColor(null)).toBeNull();
+  });
+
+  it("prefers the chroma render over the skin display icon", () => {
+    const catalog = catalogFromValorantApi({
+      tiers: [],
+      weapons: [
+        {
+          displayName: "Marshal",
+          skins: [
+            {
+              uuid: "5211efa8-4efd-09bb-6cee-72b86a8a5972",
+              displayName: "Marshal Soberano",
+              displayIcon: "https://media.valorant-api.com/weaponskins/5211efa8-4efd-09bb-6cee-72b86a8a5972/displayicon.png",
+              levels: [
+                {
+                  uuid: "c5dd6298-4928-5d64-5cd0-7fa41ea89d81",
+                  displayIcon: "https://media.valorant-api.com/weaponskinlevels/c5dd6298-4928-5d64-5cd0-7fa41ea89d81/displayicon.png",
+                },
+              ],
+              chromas: [
+                {
+                  displayIcon: "https://media.valorant-api.com/weaponskinchromas/18c67b9a-419d-aa6d-224f-869f7e541fff/displayicon.png",
+                  fullRender: "https://media.valorant-api.com/weaponskinchromas/18c67b9a-419d-aa6d-224f-869f7e541fff/fullrender.png",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      bundles: [],
+    });
+    expect(catalog.skins[0].imageUrl).toBe(
+      "https://media.valorant-api.com/weaponskinchromas/18c67b9a-419d-aa6d-224f-869f7e541fff/fullrender.png",
+    );
   });
 
   it("suggests catalog skins by a partial name and filters a weapon by edition", () => {

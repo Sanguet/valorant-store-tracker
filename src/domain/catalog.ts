@@ -211,6 +211,21 @@ interface ApiWeapon {
   skins?: ApiSkin[];
 }
 
+function skinArtUrl(skin: ApiSkin): string | null {
+  for (const chroma of skin.chromas ?? []) {
+    if (chroma.fullRender) return chroma.fullRender;
+  }
+  for (const level of skin.levels ?? []) {
+    if (level.displayIcon) return level.displayIcon;
+  }
+  for (const chroma of skin.chromas ?? []) {
+    if (chroma.displayIcon) return chroma.displayIcon;
+  }
+  // displayIcon is last: valorant-api still returns a URL when the skin has no
+  // icon, and that file is a gray X (see isMissingSkinArt).
+  return skin.displayIcon ?? null;
+}
+
 interface ApiBundle {
   uuid?: string;
   displayName?: string;
@@ -233,7 +248,7 @@ export function catalogFromValorantApi(input: {
     for (const skin of weapon.skins ?? []) {
       if (!skin.uuid || !skin.displayName) continue;
       const edition = skin.contentTierUuid ? (tiers.get(skin.contentTierUuid.toLowerCase()) ?? null) : null;
-      const imageUrl = skin.displayIcon ?? skin.chromas?.[0]?.fullRender ?? skin.chromas?.[0]?.displayIcon ?? skin.levels?.[0]?.displayIcon ?? null;
+      const imageUrl = skinArtUrl(skin);
       skins.push({
         skinId: skin.uuid.toLowerCase(),
         levelIds: (skin.levels ?? []).flatMap((level) => (level.uuid ? [level.uuid.toLowerCase()] : [])),

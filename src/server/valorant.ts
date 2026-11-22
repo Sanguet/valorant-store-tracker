@@ -142,14 +142,16 @@ export async function readStoreCatalog(sql: Sql): Promise<Catalog> {
   return loadCatalog(toApiLanguage(getSettings(sql).locale));
 }
 
+const CATALOG_ART_REVISION = 1;
+
 async function loadCatalog(language: string): Promise<Catalog> {
   const file = path.join(/*turbopackIgnore: true*/ dataDirectory(), "catalog", `${language}.json`);
   const fresh = (fetchedAt: string) => Date.now() - new Date(fetchedAt).getTime() < 24 * 60 * 60 * 1000;
   if (fs.existsSync(file)) {
     try {
-      const cached = JSON.parse(fs.readFileSync(file, "utf8")) as { fetchedAt: string; catalog: Catalog };
+      const cached = JSON.parse(fs.readFileSync(file, "utf8")) as { fetchedAt: string; artRevision?: number; catalog: Catalog };
       const hasWeapons = (cached.catalog.weapons?.length ?? 0) > 0;
-      if (fresh(cached.fetchedAt) && cached.catalog.skins.some((skin) => skin.tier) && hasWeapons) return cached.catalog;
+      if (fresh(cached.fetchedAt) && cached.artRevision === CATALOG_ART_REVISION && cached.catalog.skins.some((skin) => skin.tier) && hasWeapons) return cached.catalog;
     } catch {
       // A bad cache is ignored and fetched again.
     }
@@ -167,7 +169,7 @@ async function loadCatalog(language: string): Promise<Catalog> {
       tiers: ((tiers.body as { data?: unknown[] } | null)?.data ?? []) as [],
     });
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, JSON.stringify({ fetchedAt: new Date().toISOString(), catalog }));
+    fs.writeFileSync(file, JSON.stringify({ fetchedAt: new Date().toISOString(), artRevision: CATALOG_ART_REVISION, catalog }));
     return catalog;
   } catch {
     if (fs.existsSync(file)) {
