@@ -1,138 +1,199 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { simulateNightAction } from "@/app/actions";
-import { SkinImage } from "@/components/skin-image";
-import { Button } from "@/components/ui/button";
-import { tierColor } from "@/domain/catalog";
-import { NIGHT_DISCOUNT_MAX, NIGHT_DISCOUNT_MIN, payAtDiscount } from "@/domain/night-market";
-import type { NightRealCard, NightSimCard, NightView } from "@/domain/queries";
-import { formatRemaining, formatVp, formatWhen } from "@/domain/text";
+import { useEffect, useLayoutEffect, useState } from "react";
+import Link from "next/link";
+import { RevealCard } from "@/components/reveal-card";
+import type { OfferView } from "@/domain/queries";
+import { markIntroSeen, readReveal, revealOffer, type RevealRecord } from "@/domain/reveal";
+import { formatRemaining, formatWhen } from "@/domain/text";
 import { cn } from "@/lib/cn";
 
-export function NightBoard({ night, serverNow }: { night: NightView; serverNow: number }) {
-  const router = useRouter();
-  const [mode, setMode] = useState<"real" | "sim">(night.real ? "real" : "sim");
-  const [pending, start] = useTransition();
-  const showingReal = Boolean(night.real) && mode === "real";
-  const resetLeft = night.resetAt ? new Date(night.resetAt).getTime() - serverNow : 0;
+export interface NightFace {
+  id: number;
+  skinId: string | null;
+  name: string;
+  weaponName: string | null;
+  edition: string | null;
+  priceVp: number;
+  priceText: string;
+  detail: string;
+  imageFile: string | null;
+  wished: boolean;
+  owned: boolean;
+}
+
+function toOffer(face: NightFace): OfferView {
+  return {
+    id: face.id,
+    position: face.id,
+    skinId: face.skinId,
+    levelId: face.skinId ?? "",
+    name: face.name,
+    weaponName: face.weaponName,
+    edition: face.edition,
+    priceVp: face.priceVp,
+    note: "passed",
+    owned: face.owned,
+    wished: face.wished,
+    imageFile: face.imageFile,
+    unresolved: false,
+  };
+}
+
+function storageKey(accountPuuid: string) {
+  return `valorant-mercado-revelado:${accountPuuid}`;
+}
+
+function loadRecord(revealId: number, key: string): RevealRecord {
+  try {
+    return readReveal(localStorage.getItem(key), revealId);
+  } catch {
+    return readReveal(null, revealId);
+  }
+}
+
+function saveRecord(record: RevealRecord, key: string) {
+  try {
+    localStorage.setItem(key, JSON.stringify(record));
+  } catch {
+    // The reveal still works for this visit if the browser blocks storage.
+  }
+}
+
+function prefersStillness() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+export function NightBoard({
+  faces,
+  revealId,
+  accountPuuid,
+  expiresAt,
+  serverNow,
+  hasReal,
+  mode,
+  empty,
+}: {
+  faces: NightFace[];
+  revealId: number;
+  accountPuuid: string;
+  expiresAt: string | null;
+  serverNow: number;
+  hasReal: boolean;
+  mode: "real" | "sim";
+  empty: string | null;
+}) {
+  const key = storageKey(accountPuuid);
+  const [record, setRecord] = useState<RevealRecord | null>(null);
+  const [intro, setIntro] = useState(false);
+  const [animatingId, setAnimatingId] = useState<number | null>(null);
+  const [wishFlash, setWishFlash] = useState(false);
+
+  useLayoutEffect(() => {
+    const stored = loadRecord(revealId, key);
+    setRecord(stored);
+    setIntro(faces.length > 0 && !stored.introSeen);
+    setAnimatingId(null);
+  }, [revealId, key, faces.length]);
+
+  useEffect(() => {
+    if (!intro || !record) return;
+    const timer = window.setTimeout(() => finishIntro(), prefersStillness() ? 700 : 1400);
+    return () => window.clearTimeout(timer);
+  }, [intro, record]);
+
+  useEffect(() => {
+    if (animatingId === null) return;
+    const timer = window.setTimeout(() => {
+      setAnimatingId(null);
+      setWishFlash(false);
+    }, 1300);
+    return () => window.clearTimeout(timer);
+  }, [animatingId]);
+
+  function finishIntro() {
+    setIntro(false);
+    setRecord((current) => {
+      if (!current) return current;
+      const seen = markIntroSeen(current);
+      saveRecord(seen, key);
+      return seen;
+    });
+  }
+
+  function reveal(offerId: number, wished: boolean) {
+    if (intro || !record || record.offerIds.includes(offerId)) return;
+    setRecord((current) => {
+      if (!current || current.offerIds.includes(offerId)) return current;
+      const next = revealOffer(current, offerId);
+      saveRecord(next, key);
+      return next;
+    });
+    if (prefersStillness()) return;
+    setAnimatingId(offerId);
+    if (wished) setWishFlash(true);
+  }
+
+  const ready = record !== null;
+  const left = expiresAt ? new Date(expiresAt).getTime() - serverNow : 0;
 
   return (
-    <div className="grid gap-4">
-      {night.real ? (
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Qué mercado ver">
-          <Button variant={mode === "real" ? "primary" : "quiet"} role="tab" aria-selected={mode === "real"} onClick={() => setMode("real")}>
+    <section className="relative flex min-h-0 flex-1 flex-col gap-2">
+      <h1 className="sr-only">Mercado negro</h1>
+      {hasReal ? (
+        <div className="flex shrink-0 gap-2 text-sm" role="tablist" aria-label="Qué mercado ver">
+          <Link href="/mercado" aria-current={mode === "real" ? "page" : undefined} className={cn("rounded-full px-3 py-1", mode === "real" ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
             El de hoy
-          </Button>
-          <Button variant={mode === "sim" ? "primary" : "quiet"} role="tab" aria-selected={mode === "sim"} onClick={() => setMode("sim")}>
+          </Link>
+          <Link href="/mercado?vista=simulador" aria-current={mode === "sim" ? "page" : undefined} className={cn("rounded-full px-3 py-1", mode === "sim" ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
             Simulador
-          </Button>
+          </Link>
         </div>
       ) : null}
-
-      {showingReal && night.real ? (
-        <section className="grid gap-3">
-          <p className="text-sm text-zinc-400">
-            Leído del cliente. Vence el {formatWhen(night.real.expiresAt)} · {formatRemaining(new Date(night.real.expiresAt).getTime() - serverNow)}
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {night.real.offers.map((offer) => (
-              <RealCard key={`${offer.skinId ?? offer.name}-${offer.priceVp}`} offer={offer} />
-            ))}
-          </div>
-        </section>
+      {faces.length > 0 ? (
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 sm:grid-cols-3 sm:grid-rows-2 sm:gap-3">
+          {faces.map((face, index) => {
+            const offer = toOffer(face);
+            const open = record?.offerIds.includes(face.id) ?? false;
+            return (
+              <RevealCard
+                key={face.id}
+                offer={offer}
+                open={open}
+                animate={animatingId === face.id}
+                enterIndex={index}
+                showNotes={false}
+                detail={face.detail}
+                priceText={face.priceText}
+                onReveal={() => reveal(face.id, face.wished)}
+                locked={intro || !ready}
+                onSettled={() => {
+                  setAnimatingId((current) => (current === face.id ? null : current));
+                  setWishFlash(false);
+                }}
+              />
+            );
+          })}
+        </div>
       ) : (
-        <section className="grid gap-3">
-          {night.resetAt ? (
-            <p className="text-sm text-zinc-400">
-              Una simulación por reinicio de la tienda diaria. Esta vence el {formatWhen(night.resetAt)} · {formatRemaining(resetLeft)}
-            </p>
-          ) : (
-            <p className="text-sm text-zinc-300">Hacé una lectura de la tienda para saber cuándo reinicia. Sin ese horario no se puede simular.</p>
-          )}
-          {night.simulation ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {night.simulation.map((offer) => (
-                <SimCard key={offer.skinId} offer={offer} />
-              ))}
-            </div>
-          ) : null}
-          {night.simulationLocked && !night.simulation ? <p className="text-sm text-[#ffb4bc]">La simulación de este reinicio no se pudo leer. Sigue valiendo hasta que reinicie la tienda.</p> : null}
-          {night.resetAt && !night.simulationLocked ? (
-            <Button
-              variant="primary"
-              aria-disabled={pending || undefined}
-              aria-busy={pending || undefined}
-              onClick={() => {
-                if (pending) return;
-                start(async () => {
-                  await simulateNightAction();
-                  router.refresh();
-                });
-              }}
-            >
-              {pending ? "Simulando…" : "Simular este reinicio"}
-            </Button>
-          ) : null}
-          {night.simulationLocked && night.simulation ? (
-            <p className="text-sm text-zinc-400">Ya usaste la simulación de esta tienda. La próxima espera el reinicio diario.</p>
-          ) : null}
-        </section>
+        <div className="flex min-h-0 flex-1 items-center">
+          <p className="max-w-xl text-sm text-zinc-300">{empty}</p>
+        </div>
       )}
-    </div>
-  );
-}
-
-function SimCard({ offer }: { offer: NightSimCard }) {
-  return (
-    <article className={cn("flex flex-col overflow-hidden rounded-2xl border bg-[#141922]", offer.wished && "ring-2 ring-inset ring-emerald-400")} style={{ borderColor: tierColor(offer.edition) ?? "rgba(255,255,255,0.12)" }}>
-      <SkinImage file={offer.imageFile} name={offer.name} />
-      <div className="grid gap-1 p-3">
-        <h2 className="font-medium">{offer.name}</h2>
-        <p className="text-sm text-zinc-400">
-          {offer.weaponName}
-          {offer.edition ? ` · ${offer.edition}` : ""}
+      {expiresAt ? (
+        <p className="shrink-0 truncate text-xs text-zinc-400">
+          Vence el {formatWhen(expiresAt)} · {formatRemaining(left)}
         </p>
-        <p className="text-sm">{formatVp(offer.priceVp)}</p>
-        <p className="text-sm text-zinc-300">
-          Descuento {NIGHT_DISCOUNT_MIN}% a {NIGHT_DISCOUNT_MAX}%
-        </p>
-        <p className="text-xs text-zinc-400">
-          Pagarías entre {formatVp(payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MAX))} y {formatVp(payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MIN))}
-        </p>
-        <Marks owned={offer.owned} wished={offer.wished} />
-      </div>
-    </article>
-  );
-}
-
-function RealCard({ offer }: { offer: NightRealCard }) {
-  return (
-    <article className={cn("flex flex-col overflow-hidden rounded-2xl border bg-[#141922]", offer.wished && "ring-2 ring-inset ring-emerald-400")} style={{ borderColor: tierColor(offer.edition) ?? "rgba(255,255,255,0.12)" }}>
-      <SkinImage file={offer.imageFile} name={offer.name} />
-      <div className="grid gap-1 p-3">
-        <h2 className="font-medium">{offer.name}</h2>
-        <p className="text-sm text-zinc-400">
-          {offer.weaponName ?? "Arma"}
-          {offer.edition ? ` · ${offer.edition}` : ""}
-        </p>
-        <p className="text-sm">{formatVp(offer.priceVp)}</p>
-        <p className="text-sm text-zinc-300">{offer.discountPercent === null ? "Descuento del cliente" : `${offer.discountPercent}% de descuento`}</p>
-        {offer.finalVp !== null ? <p className="text-sm">Pagás {formatVp(offer.finalVp)}</p> : null}
-        <Marks owned={offer.owned} wished={offer.wished} />
-      </div>
-    </article>
-  );
-}
-
-function Marks({ owned, wished }: { owned: boolean; wished: boolean }) {
-  if (!owned && !wished) return null;
-  return (
-    <p className="text-xs text-zinc-300">
-      {owned ? "Ya la tenés" : null}
-      {owned && wished ? " · " : null}
-      {wished ? "En deseos" : null}
-    </p>
+      ) : null}
+      {intro ? (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+          <p className="reveal-intro text-3xl font-semibold tracking-wide text-white sm:text-5xl" onAnimationEnd={finishIntro}>
+            Mercado negro
+          </p>
+        </div>
+      ) : null}
+      {wishFlash ? <div className="reveal-flash pointer-events-none absolute inset-0 z-10" aria-hidden /> : null}
+      {!ready && faces.length > 0 ? <div className="absolute inset-0 bg-[#090b10]" aria-hidden /> : null}
+    </section>
   );
 }

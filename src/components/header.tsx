@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { createProfileAction } from "@/app/actions";
 import { calendarDay, NIGHT_SEEN_KEY, nightMenuGlows } from "@/domain/night-market";
+import { SubmitButton } from "@/components/submit-button";
 import { cn } from "@/lib/cn";
 
 const LINKS = [
@@ -14,7 +16,7 @@ const LINKS = [
   { href: "/mercado", label: "Mercado negro", glow: true },
 ];
 
-export function Header({ account }: { account: string }) {
+export function Header({ account, offer = null }: { account: string; offer?: { puuid: string; label: string } | null }) {
   const pathname = usePathname();
   const viewingNight = pathname.startsWith("/mercado");
   const [glows, setGlows] = useState(false);
@@ -29,13 +31,14 @@ export function Header({ account }: { account: string }) {
         <div className="flex items-center gap-3">
           <span className="h-8 w-1.5 rounded-full bg-[#ff4655]" aria-hidden />
           <div>
-            <Link href="/" className="text-lg font-semibold tracking-tight">
-              Tienda
+            <Link href="/" className="text-lg font-semibold tracking-tight" aria-label="Valorant Store Tracker">
+              <span className="md:hidden">VST</span>
+              <span className="hidden md:inline">Valorant Store Tracker</span>
             </Link>
             <p className="text-xs text-zinc-400">{account}</p>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto text-sm">
+        <nav className="flex gap-1 overflow-x-auto py-1 text-sm">
           {LINKS.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
@@ -43,7 +46,7 @@ export function Header({ account }: { account: string }) {
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 whitespace-nowrap", active ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}
+                className={cn("nav-view inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 whitespace-nowrap", active ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}
               >
                 {link.glow ? (
                   <span className={cn("inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#ff4655]/20 text-[#ff4655]", glows && "night-glow", active && "text-zinc-950")} aria-hidden>
@@ -56,11 +59,19 @@ export function Header({ account }: { account: string }) {
               </Link>
             );
           })}
-          <Link href="/conexion" aria-current={pathname.startsWith("/conexion") ? "page" : undefined} className={cn("rounded-full px-3 py-1.5 whitespace-nowrap", pathname.startsWith("/conexion") ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
+          <Link href="/conexion" aria-current={pathname.startsWith("/conexion") ? "page" : undefined} className={cn("nav-view inline-flex items-center rounded-full px-3 py-1.5 whitespace-nowrap", pathname.startsWith("/conexion") ? "bg-white text-zinc-950" : "text-zinc-300 hover:bg-white/10")}>
             Conexión
           </Link>
         </nav>
       </div>
+      {offer ? (
+        <form action={createProfileAction} className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 border-t border-white/10 px-4 py-2">
+          <p className="text-sm text-zinc-200">
+            El Riot Client está en {offer.label}. Crear un perfil no borra {account}.
+          </p>
+          <SubmitButton idle="Crear perfil" pending="Creando…" variant="primary" />
+        </form>
+      ) : null}
     </header>
   );
 }

@@ -241,9 +241,24 @@ summary:focus-visible {
   }
 }
 
+.nav-view {
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.32s ease, color 0.32s ease, box-shadow 0.32s ease;
+}
+
+.nav-view[aria-current="page"] {
+  position: relative;
+  z-index: 1;
+  transform: scale(1.08);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .night-glow {
     animation: none;
     box-shadow: 0 0 8px #ff4655;
+  }
+
+  .nav-view {
+    transition: none;
   }
 }

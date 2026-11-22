@@ -47,6 +47,12 @@ export function nightMenuGlows(storedDay: string | null, today: string, viewing:
   return storedDay !== today;
 }
 
+export function revealKey(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash, 31) + value.charCodeAt(index);
+  return hash | 0;
+}
+
 export function payAtDiscount(priceVp: number, percent: number): number {
   return Math.round((priceVp * (100 - percent)) / 100);
 }

@@ -20,6 +20,7 @@ import type { OfferNote } from "@/domain/types";
 import { getSql, saveSql } from "@/server/db";
 import { loadExample, refreshStore } from "@/server/refresh";
 import { cacheImages } from "@/server/images";
+import { createOfferedProfile } from "@/server/profiles";
 import { readStoreCatalog } from "@/server/valorant";
 
 function refreshPages() {
@@ -86,19 +87,13 @@ export async function addCatalogSkinAction(skinId: string) {
   return { ok: true as const };
 }
 
-export async function simulateNightAction() {
+export async function ensureNightSimulation() {
   const sql = await getSql();
   const now = new Date();
   const view = getNightView(sql, now);
-  if (!view.resetAt || view.simulationLocked) {
-    refreshPages();
-    return;
-  }
+  if (!view.resetAt || view.simulationLocked) return;
   const drawn = drawNightMarket(nightPool(await readStoreCatalog(sql)), Math.random);
-  if (drawn.length === 0 || !saveNightSim(sql, view.resetAt, drawn, now)) {
-    refreshPages();
-    return;
-  }
+  if (drawn.length === 0 || !saveNightSim(sql, view.resetAt, drawn, now)) return;
   for (const offer of drawn) {
     rememberCatalogSkin(sql, {
       skinId: offer.skinId,
@@ -111,7 +106,14 @@ export async function simulateNightAction() {
   }
   await cacheImages(sql);
   saveSql();
+}
+
+export async function createProfileAction() {
+  const created = await createOfferedProfile();
+  if (!created) redirect("/");
+  await refreshStore(await getSql());
   refreshPages();
+  redirect("/");
 }
 
 export async function removeWishlistAction(id: number) {

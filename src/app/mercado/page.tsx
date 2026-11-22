@@ -1,54 +1,115 @@
-import { NightBoard } from "@/components/night-board";
-import { GUN_PRICE_VP, NIGHT_DISCOUNT_MAX, NIGHT_DISCOUNT_MIN, NIGHT_OFFER_COUNT, NIGHT_PREMIUM_MINIMUM, NIGHT_SAME_WEAPON_MAXIMUM } from "@/domain/night-market";
-import { getNightView } from "@/domain/queries";
+import { NightBoard, type NightFace } from "@/components/night-board";
+import { GUN_PRICE_VP, NIGHT_DISCOUNT_MAX, NIGHT_DISCOUNT_MIN, NIGHT_OFFER_COUNT, NIGHT_PREMIUM_MINIMUM, NIGHT_SAME_WEAPON_MAXIMUM, payAtDiscount, revealKey } from "@/domain/night-market";
+import { getNightView, type NightRealCard, type NightSimCard } from "@/domain/queries";
+import { getAccount } from "@/domain/store";
 import { formatVp } from "@/domain/text";
+import { ensureNightSimulation } from "@/app/actions";
 import { getSql } from "@/server/db";
 
-export default async function NightMarketPage() {
+function simFace(offer: NightSimCard, index: number): NightFace {
+  const low = payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MAX);
+  const high = payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MIN);
+  return {
+    id: index + 1,
+    skinId: offer.skinId,
+    name: offer.name,
+    weaponName: offer.weaponName,
+    edition: offer.edition,
+    priceVp: offer.priceVp,
+    priceText: `${formatVp(low)} – ${formatVp(high)}`,
+    detail: `${NIGHT_DISCOUNT_MIN}% a ${NIGHT_DISCOUNT_MAX}% sobre ${formatVp(offer.priceVp)}`,
+    imageFile: offer.imageFile,
+    wished: offer.wished,
+    owned: offer.owned,
+  };
+}
+
+function realFace(offer: NightRealCard, index: number): NightFace {
+  const paid = offer.finalVp ?? offer.priceVp;
+  const detail = offer.discountPercent === null ? `Precio de lista ${formatVp(offer.priceVp)}` : `${offer.discountPercent}% sobre ${formatVp(offer.priceVp)}`;
+  return {
+    id: index + 1,
+    skinId: offer.skinId,
+    name: offer.name,
+    weaponName: offer.weaponName,
+    edition: offer.edition,
+    priceVp: paid,
+    priceText: formatVp(paid),
+    detail,
+    imageFile: offer.imageFile,
+    wished: offer.wished,
+    owned: offer.owned,
+  };
+}
+
+export default async function NightMarketPage({ searchParams }: { searchParams: Promise<{ vista?: string }> }) {
+  const query = await searchParams;
+  const sql = await getSql();
   const now = new Date();
-  const night = getNightView(await getSql(), now);
+  let night = getNightView(sql, now);
+  const mode = night.real && query.vista !== "simulador" ? "real" : "sim";
+  if (mode === "sim") {
+    await ensureNightSimulation();
+    night = getNightView(sql, now);
+  }
+  const account = getAccount(sql);
+  const faces = mode === "real" && night.real ? night.real.offers.map(realFace) : (night.simulation ?? []).map(simFace);
+  const expiresAt = mode === "real" ? (night.real?.expiresAt ?? null) : night.resetAt;
+  const revealId = revealKey(`${mode}:${expiresAt ?? "sin-reinicio"}`);
+  const empty =
+    mode === "sim" && !night.resetAt
+      ? "Hacé una lectura de la tienda para saber cuándo reinicia. Sin ese horario no hay sorteo."
+      : mode === "sim" && night.simulationLocked && !night.simulation
+        ? "La simulación de este reinicio no se pudo leer. Sigue valiendo hasta que reinicie la tienda."
+        : faces.length === 0
+          ? "No hay armas para este mercado."
+          : null;
+
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Mercado negro</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-          {night.real
-            ? "El cliente tiene un mercado negro abierto. Podés ver el real o el simulador."
-            : "Ahora no hay mercado negro en el cliente. Esta vista es el simulador."}
-        </p>
-      </div>
-      <NightBoard night={night} serverNow={now.getTime()} />
-      <section className="grid max-w-3xl gap-3 text-sm text-zinc-300">
-        <h2 className="text-lg font-medium text-zinc-100">De dónde salen las reglas</h2>
-        <p>
-          Riot, en el artículo{" "}
-          <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/nightmarket-valorant" target="_blank" rel="noreferrer">
-            Night.Market
-          </a>{" "}
-          (5 de marzo de 2025), dice que son {NIGHT_OFFER_COUNT} skins con descuento, un solo conjunto y distinto para cada jugador. El contenido es de un acto anterior al anterior: en el acto 3, skins del acto 1. Pueden aparecer Select, Deluxe y Premium. Al menos {NIGHT_PREMIUM_MINIMUM} son Premium o más. No hay más de {NIGHT_SAME_WEAPON_MAXIMUM} ofertas de la misma arma, salvo que eso impida llegar a {NIGHT_OFFER_COUNT}. También pueden aparecer algunas melee Exclusive.
-        </p>
-        <p>
-          Los precios de las armas de fuego están en{" "}
-          <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/price-tiers-for-skins-in-valorant" target="_blank" rel="noreferrer">
-            Price Tiers for Skins
-          </a>{" "}
-          (20 de febrero de 2026): Select {formatVp(GUN_PRICE_VP.select)}, Deluxe {formatVp(GUN_PRICE_VP.deluxe)}, Premium {formatVp(GUN_PRICE_VP.premium)}. Exclusive y Ultra dicen “varía”.
-        </p>
-        <p>
-          Riot no publica la chance de cada skin ni la de cada porcentaje de descuento. El simulador elige con la misma chance entre las skins Select, Deluxe y Premium de armas de fuego del catálogo local, después de reservar {NIGHT_PREMIUM_MINIMUM} Premium. Esa igualdad no es una probabilidad oficial: es el sorteo que no agrega pesos inventados. El tope de {NIGHT_SAME_WEAPON_MAXIMUM} por arma se respeta, y solo se suelta si hace falta para llegar a {NIGHT_OFFER_COUNT}.
-        </p>
-        <p>
-          El rango {NIGHT_DISCOUNT_MIN}% a {NIGHT_DISCOUNT_MAX}% lo dice la{" "}
-          <a className="underline" href="https://wiki.playvalorant.com/en-us/Night.Market" target="_blank" rel="noreferrer">
-            wiki de VALORANT
-          </a>
-          , mantenida por jugadores, no el artículo de Riot. El simulador no elige un porcentaje. Muestra el rango. El VP de los extremos es el precio oficial menos ese porcentaje, redondeado al entero más cercano. Riot no publica ni la curva ni el redondeo.
-        </p>
-        <p>
-          El simulador no incluye melee Exclusive, porque Riot dice que pueden aparecer y que el precio Exclusive varía, sin publicar la lista. Tampoco filtra por acto ni por pase de batalla: valorant-api no trae la fecha de salida ni esa marca. La wiki, además, saca las melee de más de 3.550 VP y las armas Exclusive o Ultra; esas últimas ya quedan afuera porque su precio no es fijo.
-        </p>
-        <p>El brillo del menú se apaga la primera vez que abrís esta vista en el día de Buenos Aires. La simulación es otra cosa: una por reinicio de la tienda diaria, no por medianoche.</p>
-      </section>
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <NightBoard
+        faces={faces}
+        revealId={revealId}
+        accountPuuid={account?.puuid ?? ""}
+        expiresAt={expiresAt}
+        serverNow={now.getTime()}
+        hasReal={Boolean(night.real)}
+        mode={mode}
+        empty={empty}
+      />
+      <details className="mt-2 shrink-0 rounded-2xl border border-white/10 px-3 py-2 text-sm text-zinc-300">
+        <summary className="cursor-pointer text-zinc-100">Reglas y probabilidades</summary>
+        <div className="grid max-h-36 gap-3 overflow-y-auto pt-3">
+          <p>
+            Riot, en el artículo{" "}
+            <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/nightmarket-valorant" target="_blank" rel="noreferrer">
+              Night.Market
+            </a>{" "}
+            (5 de marzo de 2025), dice que son {NIGHT_OFFER_COUNT} skins con descuento, un solo conjunto y distinto para cada jugador. El contenido es de un acto anterior al anterior: en el acto 3, skins del acto 1. Pueden aparecer Select, Deluxe y Premium. Al menos {NIGHT_PREMIUM_MINIMUM} son Premium o más. No hay más de {NIGHT_SAME_WEAPON_MAXIMUM} ofertas de la misma arma, salvo que eso impida llegar a {NIGHT_OFFER_COUNT}. También pueden aparecer algunas melee Exclusive.
+          </p>
+          <p>
+            Los precios de las armas de fuego están en{" "}
+            <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/price-tiers-for-skins-in-valorant" target="_blank" rel="noreferrer">
+              Price Tiers for Skins
+            </a>{" "}
+            (20 de febrero de 2026): Select {formatVp(GUN_PRICE_VP.select)}, Deluxe {formatVp(GUN_PRICE_VP.deluxe)}, Premium {formatVp(GUN_PRICE_VP.premium)}. Exclusive y Ultra dicen “varía”.
+          </p>
+          <p>
+            Riot no publica la chance de cada skin ni la de cada porcentaje de descuento. El simulador elige con la misma chance entre las skins Select, Deluxe y Premium de armas de fuego del catálogo local, después de reservar {NIGHT_PREMIUM_MINIMUM} Premium. Esa igualdad no es una probabilidad oficial: es el sorteo que no agrega pesos inventados. El tope de {NIGHT_SAME_WEAPON_MAXIMUM} por arma se respeta, y solo se suelta si hace falta para llegar a {NIGHT_OFFER_COUNT}.
+          </p>
+          <p>
+            El rango {NIGHT_DISCOUNT_MIN}% a {NIGHT_DISCOUNT_MAX}% lo dice la{" "}
+            <a className="underline" href="https://wiki.playvalorant.com/en-us/Night.Market" target="_blank" rel="noreferrer">
+              wiki de VALORANT
+            </a>
+            , mantenida por jugadores, no el artículo de Riot. El simulador no elige un porcentaje. Muestra el rango. El VP de los extremos es el precio oficial menos ese porcentaje, redondeado al entero más cercano. Riot no publica ni la curva ni el redondeo.
+          </p>
+          <p>
+            El simulador no incluye melee Exclusive, porque Riot dice que pueden aparecer y que el precio Exclusive varía, sin publicar la lista. Tampoco filtra por acto ni por pase de batalla: valorant-api no trae la fecha de salida ni esa marca. La wiki, además, saca las melee de más de 3.550 VP y las armas Exclusive o Ultra; esas últimas ya quedan afuera porque su precio no es fijo.
+          </p>
+          <p>El sorteo ocurre al entrar y queda fijo hasta el reinicio de la tienda diaria. El brillo del menú se apaga la primera vez que abrís esta vista en el día de Buenos Aires.</p>
+        </div>
+      </details>
     </div>
   );
 }

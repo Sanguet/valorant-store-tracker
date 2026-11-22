@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Header } from "@/components/header";
 import { accountLabel } from "@/domain/text";
 import { getAccount } from "@/domain/store";
-import { getSql } from "@/server/db";
+import { currentProfileOffer, getSql } from "@/server/db";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const sql = await getSql();
   const account = getAccount(sql);
+  const offer = currentProfileOffer();
   return (
     <html lang="es">
       <body className="antialiased">
@@ -23,7 +24,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Saltar al contenido
         </a>
         <div className="flex h-dvh flex-col">
-          <Header account={accountLabel(account)} />
+          <Header account={accountLabel(account)} offer={offer} />
           <main id="contenido" className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col overflow-y-auto px-4 py-3">
             {children}
           </main>

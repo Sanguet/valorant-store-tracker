@@ -10,17 +10,27 @@ import { formatWhen } from "@/domain/text";
 
 const STORAGE_KEY = "valorant-tienda-revelado";
 
-function loadRecord(cycleId: number): RevealRecord {
+function storageKey(accountPuuid: string) {
+  return accountPuuid ? `${STORAGE_KEY}:${accountPuuid}` : STORAGE_KEY;
+}
+
+function loadRecord(cycleId: number, key: string): RevealRecord {
   try {
-    return readReveal(localStorage.getItem(STORAGE_KEY), cycleId);
+    const scoped = localStorage.getItem(key);
+    if (scoped) return readReveal(scoped, cycleId);
+    if (key !== STORAGE_KEY) {
+      const legacy = readReveal(localStorage.getItem(STORAGE_KEY), cycleId);
+      if (legacy.introSeen || legacy.offerIds.length > 0) return legacy;
+    }
+    return readReveal(null, cycleId);
   } catch {
     return readReveal(null, cycleId);
   }
 }
 
-function saveRecord(record: RevealRecord) {
+function saveRecord(record: RevealRecord, key: string) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
+    localStorage.setItem(key, JSON.stringify(record));
   } catch {
     // The reveal still works for this visit if the browser blocks storage.
   }
@@ -36,24 +46,27 @@ export function DailyBoard({
   fixture,
   message,
   messageOk,
+  accountPuuid = "",
 }: {
   cycle: CycleView;
   serverNow: number;
   fixture: boolean;
   message: string;
   messageOk: boolean;
+  accountPuuid?: string;
 }) {
+  const key = storageKey(accountPuuid);
   const [record, setRecord] = useState<RevealRecord | null>(null);
   const [intro, setIntro] = useState(false);
   const [animatingId, setAnimatingId] = useState<number | null>(null);
   const [wishFlash, setWishFlash] = useState(false);
 
   useLayoutEffect(() => {
-    const stored = loadRecord(cycle.id);
+    const stored = loadRecord(cycle.id, key);
     setRecord(stored);
     setIntro(!stored.introSeen);
     setAnimatingId(null);
-  }, [cycle.id]);
+  }, [cycle.id, key]);
 
   useEffect(() => {
     if (!intro || !record) return;
@@ -75,7 +88,7 @@ export function DailyBoard({
     setRecord((current) => {
       if (!current) return current;
       const seen = markIntroSeen(current);
-      saveRecord(seen);
+      saveRecord(seen, key);
       return seen;
     });
   }
@@ -85,7 +98,7 @@ export function DailyBoard({
     setRecord((current) => {
       if (!current || current.offerIds.includes(offerId)) return current;
       const next = revealOffer(current, offerId);
-      saveRecord(next);
+      saveRecord(next, key);
       return next;
     });
     if (prefersStillness()) return;

@@ -28,6 +28,9 @@ export function RevealCard({
   onSettled,
   locked,
   enterIndex = 0,
+  showNotes = true,
+  detail = null,
+  priceText = null,
 }: {
   offer: OfferView;
   open: boolean;
@@ -36,6 +39,9 @@ export function RevealCard({
   onSettled: () => void;
   locked: boolean;
   enterIndex?: number;
+  showNotes?: boolean;
+  detail?: string | null;
+  priceText?: string | null;
 }) {
   const rarity = open ? tierColor(offer.edition) : null;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/15";
@@ -59,13 +65,14 @@ export function RevealCard({
         <div className="flex shrink-0 flex-col gap-1 p-2">
           <div className="flex min-w-0 items-baseline justify-between gap-2">
             <h2 className="truncate text-sm font-semibold">{offer.name}</h2>
-            <p className="shrink-0 text-xs font-medium">{formatVp(offer.priceVp)}</p>
+            <p className="shrink-0 text-xs font-medium">{priceText ?? formatVp(offer.priceVp)}</p>
           </div>
           <p className="truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition].filter(Boolean).join(" · ")}</p>
+          {detail ? <p className="truncate text-[11px] text-zinc-300">{detail}</p> : null}
           <div className="flex flex-wrap items-center gap-1">
             {offer.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] text-emerald-200">Ya es tuya</span> : null}
             {offer.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[11px] text-amber-100">En tu lista</span> : null}
-            <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} />
+            {showNotes ? <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} /> : null}
             {offer.skinId && !offer.unresolved && !offer.owned ? (
               <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} compact />
             ) : null}

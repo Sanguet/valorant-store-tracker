@@ -4,7 +4,8 @@ import { getMeta, setMeta } from "@/domain/meta";
 import { getSettings, recordSnapshot, setLocale, setReader } from "@/domain/store";
 import type { Sql } from "@/domain/sql";
 import { cacheImages } from "@/server/images";
-import { saveSql } from "@/server/db";
+import { currentProfileOffer, getSql, saveSql } from "@/server/db";
+import { rememberProfileName } from "@/server/profiles";
 import { readLockfile, type ReadFailure, type ReadSuccess } from "@/server/valorant";
 
 export interface RefreshResult {
@@ -29,13 +30,14 @@ async function finish(sql: Sql, read: ReadSuccess | ReadFailure): Promise<Refres
   if (!recorded.ok) {
     const result = {
       ok: false,
-      message: `Esta lectura es de otra cuenta (${recorded.incomingName}). El historial de esta máquina queda con ${recorded.existingName}.`,
+      message: `El Riot Client está en ${recorded.incomingName}. Creá un perfil nuevo para guardarla. ${recorded.existingName} sigue en su perfil.`,
     };
     remember(sql, result);
     return result;
   }
   const settings = getSettings(sql);
   if (read.locale && !settings.localeLocked) setLocale(sql, read.locale, false);
+  rememberProfileName(read.snapshot.account.puuid, read.snapshot.account.gameName, read.snapshot.account.tagLine);
   await cacheImages(sql);
   const result = {
     ok: true,
@@ -45,14 +47,17 @@ async function finish(sql: Sql, read: ReadSuccess | ReadFailure): Promise<Refres
   return result;
 }
 
-export async function refreshStore(sql: Sql): Promise<RefreshResult> {
+export async function refreshStore(sql?: Sql): Promise<RefreshResult> {
+  let active = sql;
   try {
-    if (process.env.VALORANT_READER === "fixture") return loadExample(sql);
-    setReader(sql, "lockfile");
-    return finish(sql, await readLockfile(sql));
+    active = await getSql();
+    if (process.env.VALORANT_READER === "fixture") return loadExample(active);
+    if (currentProfileOffer()) return { ok: true, message: "" };
+    setReader(active, "lockfile");
+    return finish(active, await readLockfile(active));
   } catch {
     const result = { ok: false, message: "No pude leer la tienda." };
-    remember(sql, result);
+    if (active) remember(active, result);
     return result;
   }
 }

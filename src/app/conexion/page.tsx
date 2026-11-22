@@ -5,10 +5,11 @@ import { LANGUAGE_OPTIONS, languageLabel } from "@/domain/language";
 import { getAccount, getSettings } from "@/domain/store";
 import { accountLabel } from "@/domain/text";
 import { getSql } from "@/server/db";
+import { listProfiles } from "@/server/profiles";
 
 const ERRORS: Record<string, string> = {
   ejemplo: "La tienda de ejemplo es otra cuenta. Borrá los datos de esta máquina si querés verla.",
-  reset: "Confirmá que querés borrar el historial de esta máquina.",
+  reset: "Confirmá que querés borrar el historial de este perfil.",
 };
 
 export default async function ConnectionPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -16,6 +17,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
   const sql = await getSql();
   const settings = getSettings(sql);
   const account = getAccount(sql);
+  const profiles = listProfiles();
   const exampleError = query.error === "ejemplo" ? ERRORS.ejemplo : null;
   const resetError = query.error === "reset" ? ERRORS.reset : null;
   return (
@@ -23,7 +25,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
       <div>
         <h1 className="text-2xl font-semibold">Conexión</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">La tienda se lee con el Riot Client abierto en esta máquina.</p>
-        <p className="mt-2 text-sm text-zinc-300">Cuenta de esta máquina: {accountLabel(account)}</p>
+        <p className="mt-2 text-sm text-zinc-300">Perfil abierto: {accountLabel(account)}</p>
       </div>
       <section className="max-w-2xl rounded-3xl border border-[#ff4655] p-5">
         <h2 className="text-lg font-medium">Riot Client local</h2>
@@ -32,6 +34,20 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
           El cliente tiene que estar abierto e iniciado. La app lee el lockfile. No hay usuario ni contraseña.
         </p>
       </section>
+      {profiles.length > 0 ? (
+        <section className="rounded-3xl border border-white/10 p-5">
+          <h2 className="text-lg font-medium">Perfiles</h2>
+          <p className="mt-2 text-sm text-zinc-400">Cada cuenta del Riot Client guarda su tienda, su historial, sus deseos y sus notas. Cambiar de cuenta no borra las otras.</p>
+          <ul className="mt-3 grid gap-2 text-sm">
+            {profiles.map((profile) => (
+              <li key={profile.puuid} className="text-zinc-200">
+                {profile.label}
+                {profile.active ? " · abierto" : ""}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <section className="rounded-3xl border border-white/10 p-5">
         <h2 className="text-lg font-medium">Idioma de los nombres</h2>
         <p className="mt-2 text-sm text-zinc-400">Es el idioma del cliente. Se toma de ahí salvo que lo fijes acá.</p>
@@ -65,8 +81,8 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
       )}
       {exampleError && account ? <FormAlert>{exampleError}</FormAlert> : null}
       <section className="rounded-3xl border border-white/10 p-5">
-        <h2 className="text-lg font-medium">Borrar los datos de esta máquina</h2>
-        <p className="mt-2 text-sm text-zinc-400">Borra el historial, la lista, las notas y la sesión. No se puede deshacer.</p>
+        <h2 className="text-lg font-medium">Borrar los datos de este perfil</h2>
+        <p className="mt-2 text-sm text-zinc-400">Borra la tienda, el historial, los deseos y las notas de este perfil. Los demás perfiles quedan.</p>
         {resetError ? (
           <div className="mt-4">
             <FormAlert>{resetError}</FormAlert>
@@ -75,7 +91,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
         <form action={resetAction} className="mt-4 grid justify-items-start gap-3">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="confirm" value="si" />
-            Entiendo que se borra el historial de esta máquina
+            Entiendo que se borra el historial de este perfil
           </label>
           <SubmitButton idle="Borrar" pending="Borrando…" variant="danger" />
         </form>

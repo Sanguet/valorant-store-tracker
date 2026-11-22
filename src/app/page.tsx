@@ -26,6 +26,7 @@ export default async function HomePage() {
           fixture={account?.isFixture ?? false}
           message={refresh.message}
           messageOk={refresh.ok}
+          accountPuuid={account?.puuid ?? ""}
         />
       ) : (
         <section className="flex min-h-0 flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-[#141922] p-6">

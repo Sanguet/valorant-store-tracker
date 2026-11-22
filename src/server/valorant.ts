@@ -291,6 +291,21 @@ function buildSnapshot(input: {
   };
 }
 
+export async function readClientIdentity(): Promise<{ puuid: string; gameName: string | null; tagLine: string | null } | null> {
+  const root = localAppData();
+  if (!root) return null;
+  const file = path.join(root, "Riot Games", "Riot Client", "Config", "lockfile");
+  if (!fs.existsSync(file)) return null;
+  const lock = parseLockfile(fs.readFileSync(file, "utf8"));
+  if (!lock) return null;
+  const token = await localRequest(lock.protocol, lock.port, lock.password, "/entitlements/v1/token");
+  const tokenBody = token.body as { accessToken?: string; subject?: string; token?: string } | null;
+  if (token.status !== 200 || !tokenBody?.subject) return null;
+  const puuid = tokenBody.subject.toLowerCase();
+  if (!/^[0-9a-f-]{36}$/i.test(puuid)) return null;
+  return { puuid, gameName: null, tagLine: null };
+}
+
 export async function readLockfile(sql: Sql): Promise<ReadSuccess | ReadFailure> {
   const root = localAppData();
   if (!root) return failure("no-client");

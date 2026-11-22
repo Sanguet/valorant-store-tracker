@@ -403,6 +403,8 @@ export function resetStore(sql: Sql) {
     sql.run("DELETE FROM offers");
     sql.run("DELETE FROM cycles");
     sql.run("DELETE FROM wishlist");
+    sql.run("DELETE FROM night_market");
+    sql.run("DELETE FROM night_sim");
     sql.run("DELETE FROM ownership");
     sql.run("DELETE FROM skins");
     sql.run("DELETE FROM account");

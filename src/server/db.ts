@@ -5,31 +5,65 @@ import { migrate } from "@/domain/schema";
 import type { Sql } from "@/domain/sql";
 import { dataDirectory } from "@/lib/data-dir";
 import { openSql, type OpenSql } from "@/lib/open-sql";
+import { clearProfileCache, resolveActiveDatabase, type ProfileOffer } from "@/server/profiles";
 
-const globalForDb = globalThis as unknown as { store?: OpenSql };
-
-function databaseFile() {
-  return path.join(/*turbopackIgnore: true*/ dataDirectory(), "store.db");
+interface StoreGlobal {
+  store?: OpenSql;
+  file?: string;
+  offer: ProfileOffer | null;
 }
 
-export async function getSql(): Promise<Sql> {
-  if (!globalForDb.store) {
-    const file = databaseFile();
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    const bytes = fs.existsSync(file) ? fs.readFileSync(file) : undefined;
-    const opened = await openSql(bytes);
-    globalForDb.store = opened;
-    migrate(opened.sql);
-    saveSql();
-    return opened.sql;
-  }
-  migrate(globalForDb.store.sql);
-  return globalForDb.store.sql;
+const globalForDb = globalThis as unknown as { valorantStore?: StoreGlobal };
+
+function slot(): StoreGlobal {
+  if (!globalForDb.valorantStore) globalForDb.valorantStore = { offer: null };
+  return globalForDb.valorantStore;
+}
+
+let chain: Promise<void> = Promise.resolve();
+
+export function getSql(): Promise<Sql> {
+  const run = chain.then(() => openActive());
+  chain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+export function currentProfileOffer(): ProfileOffer | null {
+  return slot().offer;
 }
 
 export function saveSql() {
-  if (!globalForDb.store) return;
-  const file = databaseFile();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, Buffer.from(globalForDb.store.export()));
+  const current = slot();
+  if (!current.store || !current.file) return;
+  fs.mkdirSync(path.dirname(current.file), { recursive: true });
+  fs.writeFileSync(current.file, Buffer.from(current.store.export()));
+}
+
+async function openActive(): Promise<Sql> {
+  const current = slot();
+  if (current.store && !current.file) {
+    const legacy = path.join(/*turbopackIgnore: true*/ dataDirectory(), "store.db");
+    fs.mkdirSync(path.dirname(legacy), { recursive: true });
+    fs.writeFileSync(legacy, Buffer.from(current.store.export()));
+    clearProfileCache();
+  }
+  const target = await resolveActiveDatabase();
+  current.offer = target.offer;
+  if (current.store && current.file === target.file) {
+    migrate(current.store.sql);
+    return current.store.sql;
+  }
+  if (current.store && current.file) saveSql();
+  current.store?.close();
+  fs.mkdirSync(path.dirname(target.file), { recursive: true });
+  const bytes = fs.existsSync(target.file) ? fs.readFileSync(target.file) : undefined;
+  const opened = await openSql(bytes);
+  migrate(opened.sql);
+  current.store = opened;
+  current.file = target.file;
+  saveSql();
+  return opened.sql;
 }
