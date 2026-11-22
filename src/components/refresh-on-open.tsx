@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { refreshAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 
-export function RefreshOnOpen({ enabled, refreshedAt }: { enabled: boolean; refreshedAt: string | null }) {
+export function RefreshOnOpen({ enabled, refreshedAt, overlay = false }: { enabled: boolean; refreshedAt: string | null; overlay?: boolean }) {
   const router = useRouter();
   const started = useRef(false);
   const [reading, setReading] = useState(false);
@@ -22,7 +22,7 @@ export function RefreshOnOpen({ enabled, refreshedAt }: { enabled: boolean; refr
   }, [enabled, refreshedAt, router]);
   if (!reading) return null;
   return (
-    <p role="status" aria-live="polite" className="text-sm text-zinc-300">
+    <p role="status" aria-live="polite" className={overlay ? "pointer-events-none absolute top-2 left-2 z-30 text-sm text-zinc-300" : "text-sm text-zinc-300"}>
       Leyendo la tienda…
     </p>
   );

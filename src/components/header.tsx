@@ -15,7 +15,7 @@ export function Header({ account }: { account: string }) {
   const pathname = usePathname();
   return (
     <header className="border-b border-white/10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="h-8 w-1.5 rounded-full bg-[#ff4655]" aria-hidden />
           <div>

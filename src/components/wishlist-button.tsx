@@ -4,12 +4,13 @@ import { useTransition } from "react";
 import { removeWishlistAction, wishlistAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 
-export function WishlistButton({ skinId, name, wished }: { skinId: string; name: string; wished: boolean }) {
+export function WishlistButton({ skinId, name, wished, compact = false }: { skinId: string; name: string; wished: boolean; compact?: boolean }) {
   const [pending, start] = useTransition();
   const label = wished ? `Sacar ${name} de la lista` : `Sumar ${name} a deseados`;
   return (
     <Button
       variant="quiet"
+      className={compact ? "px-2 py-1 text-xs" : undefined}
       aria-label={label}
       aria-disabled={pending || undefined}
       aria-busy={pending || undefined}

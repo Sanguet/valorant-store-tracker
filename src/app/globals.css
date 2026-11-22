@@ -23,3 +23,117 @@ summary:focus-visible {
   outline: 2px solid #f4f7fb;
   outline-offset: 2px;
 }
+
+/* Normal reveal: the black cover lifts off, like opening a sleeve.
+   Wishlist reveal: a gacha burst (shake, flash, ring, particles) before the cover breaks.
+   New store: one title slam, then the four covered cards. */
+@keyframes reveal-cover {
+  0% { transform: translateY(0) rotate(0deg); }
+  40% { transform: translateY(-6%) rotate(-1.5deg) scale(1.02); }
+  100% { transform: translateY(-115%) rotate(5deg); }
+}
+
+@keyframes reveal-cover-wish {
+  0% { transform: translateX(0) rotate(0deg) scale(1); }
+  12% { transform: translateX(-3%) rotate(-1deg) scale(1.02); }
+  24% { transform: translateX(3%) rotate(1deg) scale(1.04); }
+  40% { transform: translateX(0) rotate(0deg) scale(1.08); }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+
+@keyframes reveal-arrive {
+  0% { opacity: 0; transform: translateY(16px) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes reveal-intro {
+  0% { opacity: 0; transform: scale(1.35); letter-spacing: 0.35em; }
+  30% { opacity: 1; transform: scale(1); letter-spacing: 0.12em; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes reveal-flash {
+  0% { opacity: 0; }
+  20% { opacity: 0.72; }
+  100% { opacity: 0; }
+}
+
+@keyframes reveal-burst {
+  0% { opacity: 0.95; transform: scale(0.15); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes reveal-particle {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+
+@keyframes reveal-sheen {
+  0% { transform: translateX(-130%) skewX(-18deg); }
+  100% { transform: translateX(230%) skewX(-18deg); }
+}
+
+.reveal-cover {
+  animation: reveal-cover 0.72s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.reveal-cover-wish {
+  animation: reveal-cover-wish 1.05s cubic-bezier(0.16, 0.84, 0.28, 1) both;
+}
+
+.reveal-arrive {
+  animation: reveal-arrive 0.7s ease both;
+}
+
+.reveal-intro {
+  animation: reveal-intro 1.35s ease both;
+}
+
+.reveal-flash {
+  background: radial-gradient(circle, rgba(250, 214, 99, 0.85), rgba(16, 185, 129, 0.2) 42%, transparent 68%);
+  animation: reveal-flash 0.7s ease both;
+}
+
+.reveal-burst {
+  position: absolute;
+  inset: 12%;
+  border: 2px solid #fad663;
+  border-radius: 999px;
+  box-shadow: 0 0 24px #34d399;
+  animation: reveal-burst 0.7s ease both;
+}
+
+.reveal-particle {
+  position: absolute;
+  top: 46%;
+  left: 48%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #fad663;
+  animation: reveal-particle 0.8s ease-out both;
+}
+
+.reveal-sheen {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 35%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: reveal-sheen 0.8s ease 0.25s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-cover,
+  .reveal-cover-wish,
+  .reveal-arrive,
+  .reveal-intro,
+  .reveal-flash,
+  .reveal-burst,
+  .reveal-particle,
+  .reveal-sheen {
+    animation: none;
+  }
+}
