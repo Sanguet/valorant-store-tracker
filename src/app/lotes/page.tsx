@@ -32,7 +32,7 @@ export default async function BundlesPage() {
         <h2 className="text-lg font-medium">Anteriores</h2>
         {bundles.past.length === 0 ? <p className="text-sm text-zinc-400">Todavía no hay lotes anteriores.</p> : null}
         {bundles.past.map((bundle) => (
-          <BundlePanel key={bundle.id} bundle={bundle} linked heading="h3" serverNow={now.getTime()} />
+          <BundlePanel key={bundle.id} bundle={bundle} linked heading="h3" serverNow={now.getTime()} foldSkins skinsOpen={false} />
         ))}
       </section>
     </div>

@@ -74,20 +74,10 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
           : null;
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-      <NightBoard
-        faces={faces}
-        revealId={revealId}
-        accountPuuid={account?.puuid ?? ""}
-        expiresAt={expiresAt}
-        serverNow={now.getTime()}
-        hasReal={Boolean(night.real)}
-        mode={mode}
-        empty={empty}
-      />
-      <details className="mt-2 shrink-0 rounded-2xl border border-white/10 px-3 py-2 text-sm text-zinc-300">
-        <summary className="cursor-pointer text-zinc-100">Reglas y probabilidades</summary>
-        <div className="grid max-h-36 gap-3 overflow-y-auto pt-3">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-1">
+      <details className="shrink-0 text-sm text-zinc-300">
+        <summary className="cursor-pointer list-none py-0.5 text-zinc-100 marker:content-none [&::-webkit-details-marker]:hidden">Reglas y probabilidades</summary>
+        <div className="grid gap-3 pt-3">
           <p>
             Riot, en el artículo{" "}
             <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/nightmarket-valorant" target="_blank" rel="noreferrer">
@@ -118,6 +108,16 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
           <p>El sorteo ocurre al entrar y queda fijo hasta el reinicio de la tienda diaria. El brillo del menú se apaga la primera vez que abrís esta vista en el día de Buenos Aires.</p>
         </div>
       </details>
+      <NightBoard
+        faces={faces}
+        revealId={revealId}
+        accountPuuid={account?.puuid ?? ""}
+        expiresAt={expiresAt}
+        serverNow={now.getTime()}
+        hasReal={Boolean(night.real)}
+        mode={mode}
+        empty={empty}
+      />
     </div>
   );
 }

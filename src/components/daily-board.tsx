@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
 import { Remaining } from "@/components/countdown";
 import { RefreshButton } from "@/components/refresh-on-open";
 import { RevealCard } from "@/components/reveal-card";
+import { tierColor } from "@/domain/catalog";
 import type { CycleView } from "@/domain/queries";
 import { markIntroSeen, readReveal, revealOffer, type RevealRecord } from "@/domain/reveal";
 import { formatWhen } from "@/domain/text";
@@ -62,6 +63,7 @@ export function DailyBoard({
   const [intro, setIntro] = useState(false);
   const [animatingId, setAnimatingId] = useState<number | null>(null);
   const [wishFlash, setWishFlash] = useState(false);
+  const [wishColor, setWishColor] = useState("#fad663");
 
   useLayoutEffect(() => {
     const stored = loadRecord(cycle.id, key);
@@ -95,7 +97,7 @@ export function DailyBoard({
     });
   }
 
-  function reveal(offerId: number, wished: boolean) {
+  function reveal(offerId: number, wished: boolean, rarity: string | null) {
     if (intro || !record || record.offerIds.includes(offerId)) return;
     setRecord((current) => {
       if (!current || current.offerIds.includes(offerId)) return current;
@@ -105,7 +107,10 @@ export function DailyBoard({
     });
     if (prefersStillness()) return;
     setAnimatingId(offerId);
-    if (wished) setWishFlash(true);
+    if (wished) {
+      setWishColor(rarity ?? "#fad663");
+      setWishFlash(true);
+    }
   }
 
   const ready = record !== null;
@@ -124,7 +129,7 @@ export function DailyBoard({
               animate={animatingId === offer.id}
               enterIndex={index}
               trash={offer.skinId ? trashIds.includes(offer.skinId) : false}
-              onReveal={() => reveal(offer.id, offer.wished)}
+              onReveal={() => reveal(offer.id, offer.wished, tierColor(offer.edition))}
               locked={intro || !ready}
               onSettled={() => {
                 setAnimatingId((current) => (current === offer.id ? null : current));
@@ -152,7 +157,7 @@ export function DailyBoard({
           </p>
         </div>
       ) : null}
-      {wishFlash ? <div className="reveal-flash pointer-events-none absolute inset-0 z-10" aria-hidden /> : null}
+      {wishFlash ? <div className="reveal-flash pointer-events-none absolute inset-0 z-10" style={{ "--rarity": wishColor } as CSSProperties} aria-hidden /> : null}
       {!ready ? <div className="absolute inset-0 bg-[#090b10]" aria-hidden /> : null}
     </section>
   );

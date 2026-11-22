@@ -1,5 +1,5 @@
-export function SkinImage({ file, name, large = false, fill = false }: { file: string | null; name: string; large?: boolean; fill?: boolean }) {
-  const height = fill ? "h-full min-h-0 flex-1" : large ? "h-72 sm:h-80" : "h-36";
+export function SkinImage({ file, name, large = false, fill = false, short = false }: { file: string | null; name: string; large?: boolean; fill?: boolean; short?: boolean }) {
+  const height = fill ? "h-full min-h-0 flex-1" : large ? "h-72 sm:h-80" : short ? "h-28" : "h-36";
   if (!file) {
     return (
       <div aria-hidden className={`flex items-center justify-center bg-white/5 text-2xl text-zinc-500 ${height}`}>

@@ -10,7 +10,7 @@ export function WishlistButton({ skinId, name, wished, compact = false }: { skin
   return (
     <Button
       variant="quiet"
-      className={compact ? "px-2 py-1 text-xs" : undefined}
+      className={compact ? "min-w-0 shrink truncate px-2 py-1 text-xs" : undefined}
       aria-label={label}
       aria-disabled={pending || undefined}
       aria-busy={pending || undefined}

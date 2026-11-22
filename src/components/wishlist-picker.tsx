@@ -43,11 +43,10 @@ export function WishlistPicker({ skins, weapons, wishedIds, ownedIds }: { skins:
   }
 
   return (
-    <section className="grid gap-4 rounded-3xl border border-white/10 bg-[#141922] p-4 sm:p-5">
-      <div>
-        <h2 className="text-lg font-medium">Sumar a deseados</h2>
-        <p className="mt-1 text-sm text-zinc-400">Los nombres son los del cliente.</p>
-      </div>
+    <details className="rounded-3xl border border-white/10 bg-[#141922]">
+      <summary className="cursor-pointer list-none px-4 py-3 text-lg font-medium marker:content-none [&::-webkit-details-marker]:hidden">Sumar a deseados</summary>
+      <div className="grid gap-4 px-4 pb-5 sm:px-5">
+      <p className="text-sm text-zinc-400">Los nombres son los del cliente.</p>
       <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Cómo buscar">
         <ModeButton radio active={mode === "name"} onClick={() => setMode("name")}>
           Por nombre
@@ -115,7 +114,8 @@ export function WishlistPicker({ skins, weapons, wishedIds, ownedIds }: { skins:
           ))}
         </ul>
       ) : null}
-    </section>
+      </div>
+    </details>
   );
 }
 

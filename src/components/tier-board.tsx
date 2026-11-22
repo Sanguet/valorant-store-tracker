@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type DragEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type DragEvent, type ReactNode } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { setGradeAction } from "@/app/actions";
+import { AnimateList } from "@/components/animate-list";
 import { SkinImage } from "@/components/skin-image";
 import { tierColor, type SkinTier, type WeaponChoice } from "@/domain/catalog";
 import { TIER_ORDERS, type TierOrder } from "@/domain/tierlist";
@@ -141,29 +143,27 @@ export function TierBoard({
           <p className="text-sm text-zinc-400">Arrastrá una skin a una fila. Un click la agranda; otro click, Esc o el botón de arriba a la izquierda la achican.</p>
           <div className="grid gap-1.5">
             {ROWS.map((row) => (
-              <div key={row.id} className="grid grid-cols-[4.5rem_1fr] overflow-hidden rounded-xl bg-white/5">
-                <div className="grid content-center justify-items-center px-1 text-center text-zinc-950" style={{ background: row.color }}>
+              <div key={row.id} className="grid grid-cols-[7rem_1fr] overflow-hidden rounded-xl bg-white/5">
+                <div className="grid content-center justify-items-center px-2 text-center text-zinc-950" style={{ background: row.color }}>
                   <span className="text-2xl font-black leading-none">{row.id}</span>
-                  {row.note ? <span className="mt-1 text-[10px] font-semibold tracking-wide uppercase">{row.note}</span> : null}
+                  {row.note ? <span className="mt-1 text-xs font-semibold whitespace-nowrap">{row.note}</span> : null}
                 </div>
-                <div
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setOver(row.id);
-                  }}
-                  onDragLeave={(event) => {
+                <DropLane
+                  active={over === row.id}
+                  className="flex min-h-24 flex-wrap content-start gap-2 p-2"
+                  onOver={() => setOver(row.id)}
+                  onLeave={(event) => {
                     if (event.currentTarget.contains(event.relatedTarget as Node)) return;
                     setOver((current) => (current === row.id ? null : current));
                   }}
                   onDrop={(event) => dropOn(event, row.id)}
-                  className={cn("flex min-h-24 flex-wrap gap-2 p-2", over === row.id && "bg-white/10")}
                 >
                   {skins
                     .filter((skin) => gradeOf(skin) === row.id)
                     .map((skin) => (
                       <Tile key={skin.skinId} skin={skin} pending={pending} onOpen={setEnlargedId} />
                     ))}
-                </div>
+                </DropLane>
               </div>
             ))}
           </div>
@@ -181,17 +181,24 @@ export function TierBoard({
           >
             <h2 className="text-sm font-medium text-zinc-200">Sin clasificar</h2>
             {bank.length === 0 ? <p className="text-sm text-zinc-400">Todas las skins de esta arma ya están en una fila.</p> : null}
-            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+            <AnimateList className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {bank.map((skin) => (
                 <li key={skin.skinId}>
                   <Tile skin={skin} pending={pending} onOpen={setEnlargedId} />
                 </li>
               ))}
-            </ul>
+            </AnimateList>
           </section>
         </>
       ) : null}
-      {enlarged ? <Detail skin={{ ...enlarged, grade: gradeOf(enlarged) }} onClose={() => setEnlargedId(null)} /> : null}
+      {enlarged ? (
+        <Detail
+          skin={{ ...enlarged, grade: gradeOf(enlarged) }}
+          pending={pending}
+          onClose={() => setEnlargedId(null)}
+          onAssign={(grade) => assign(enlarged.skinId, grade)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -228,7 +235,49 @@ function Tile({ skin, pending, onOpen }: { skin: TierSkinCard; pending: boolean;
   );
 }
 
-function Detail({ skin, onClose }: { skin: TierSkinCard; onClose: () => void }) {
+function DropLane({
+  active,
+  className,
+  onOver,
+  onLeave,
+  onDrop,
+  children,
+}: {
+  active: boolean;
+  className?: string;
+  onOver: () => void;
+  onLeave: (event: DragEvent<HTMLDivElement>) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>) => void;
+  children: ReactNode;
+}) {
+  const [parent] = useAutoAnimate();
+  return (
+    <div
+      ref={parent}
+      onDragOver={(event) => {
+        event.preventDefault();
+        onOver();
+      }}
+      onDragLeave={onLeave}
+      onDrop={onDrop}
+      className={cn(className, active && "bg-white/10")}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Detail({
+  skin,
+  pending,
+  onClose,
+  onAssign,
+}: {
+  skin: TierSkinCard;
+  pending: boolean;
+  onClose: () => void;
+  onAssign: (grade: string | null) => void;
+}) {
   const color = tierColor(skin.edition);
   if (typeof document === "undefined") return null;
   return createPortal(
@@ -245,6 +294,29 @@ function Detail({ skin, onClose }: { skin: TierSkinCard; onClose: () => void }) 
           <p className="text-sm text-zinc-400">{[skin.edition, skin.priceText].filter(Boolean).join(" · ")}</p>
           {skin.grade === "F" ? <p className="mt-1 text-sm text-[#ffb4bc]">Basura</p> : null}
           {skin.grade && skin.grade !== "F" ? <p className="mt-1 text-sm text-zinc-300">Fila {skin.grade}</p> : null}
+          <div className="mt-3 flex flex-wrap gap-1" onClick={(event) => event.stopPropagation()}>
+            {ROWS.map((row) => (
+              <button
+                key={row.id}
+                type="button"
+                aria-pressed={skin.grade === row.id}
+                disabled={pending}
+                onClick={() => onAssign(skin.grade === row.id ? null : row.id)}
+                className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", skin.grade === row.id ? "bg-white text-zinc-950" : "bg-white/10 text-zinc-200 hover:bg-white/20")}
+              >
+                {row.id}
+              </button>
+            ))}
+            <button
+              type="button"
+              aria-pressed={skin.grade === null}
+              disabled={pending || skin.grade === null}
+              onClick={() => onAssign(null)}
+              className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", skin.grade === null ? "bg-white text-zinc-950" : "bg-white/10 text-zinc-200 hover:bg-white/20")}
+            >
+              Sin clasificar
+            </button>
+          </div>
         </div>
       </article>
     </div>,

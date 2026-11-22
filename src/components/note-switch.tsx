@@ -10,10 +10,10 @@ const NOTES: { value: OfferNote; label: string }[] = [
   { value: "bought", label: "Buy" },
 ];
 
-export function NoteSwitch({ kind, id, note, subject }: { kind: "offer" | "bundle"; id: number; note: OfferNote; subject: string }) {
+export function NoteSwitch({ kind, id, note, subject, nowrap = false }: { kind: "offer" | "bundle"; id: number; note: OfferNote; subject: string; nowrap?: boolean }) {
   const [pending, start] = useTransition();
   return (
-    <div className="flex flex-wrap gap-1" role="group" aria-label={`Nota de ${subject}`}>
+    <div className={cn("flex shrink-0 gap-1", nowrap ? "flex-nowrap" : "flex-wrap")} role="group" aria-label={`Nota de ${subject}`}>
       {NOTES.map((option) => (
         <button
           key={option.label}

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Remaining } from "@/components/countdown";
 import { NoteSwitch } from "@/components/note-switch";
@@ -6,6 +7,7 @@ import { WishlistButton } from "@/components/wishlist-button";
 import { tierColor } from "@/domain/catalog";
 import { formatVp, formatWhen } from "@/domain/text";
 import type { BundleSkinView, BundleView } from "@/domain/queries";
+import { cn } from "@/lib/cn";
 
 export function BundlePanel({
   bundle,
@@ -41,35 +43,41 @@ export function BundlePanel({
     </ul>
   );
   return (
-    <section className="rounded-3xl border border-white/10 bg-[#141922] p-4 sm:p-5">
-      <div className="grid gap-4 md:grid-cols-[180px_1fr]">
-        <SkinImage file={bundle.imageFile} name={bundle.name} />
-        <div className="flex flex-col gap-3">
-          <div>
-            <Heading className="text-xl font-semibold">{title}</Heading>
-            <p className="text-sm text-zinc-300">{formatVp(bundle.priceVp)}</p>
-            <p className="text-sm text-zinc-400">
-              {bundle.active ? (
-                <>
-                  Vence el {formatWhen(bundle.expiresAt)} · <Remaining expiresAt={bundle.expiresAt} serverNow={serverNow} />
-                </>
-              ) : (
-                <>Venció el {formatWhen(bundle.expiresAt)}</>
-              )}
-            </p>
-            {wished.length > 0 ? <p className="text-sm text-amber-100">En tu lista: {wished.map((skin) => skin.name).join(", ")}</p> : null}
-          </div>
-          <NoteSwitch kind="bundle" id={bundle.id} note={bundle.note} subject={bundle.name} />
-        </div>
+    <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#141922]">
+      <div className="bg-black">
+        {bundle.imageFile ? (
+          <img src={`/imagen/${bundle.imageFile}`} alt="" className="h-44 w-full object-contain object-center" />
+        ) : (
+          <div className="grid h-44 place-items-center text-2xl text-zinc-500">{bundle.name.slice(0, 1)}</div>
+        )}
       </div>
-      {bundle.skins.length > 0 && foldSkins ? (
-        <details className="mt-4" open={skinsOpen}>
-          <summary className="cursor-pointer text-sm text-zinc-300">Ver las skins ({bundle.skins.length})</summary>
-          <div className="mt-3">{skins}</div>
-        </details>
-      ) : (
-        <div className={bundle.skins.length === 0 ? undefined : "mt-4"}>{skins}</div>
-      )}
+      <div className="flex flex-col gap-3 p-4 sm:p-5">
+        <div>
+          <Heading className="text-xl font-semibold">{title}</Heading>
+          <p className="text-sm text-zinc-300">{formatVp(bundle.priceVp)}</p>
+          <p className="text-sm text-zinc-400">
+            {bundle.active ? (
+              <>
+                Vence el {formatWhen(bundle.expiresAt)} · <Remaining expiresAt={bundle.expiresAt} serverNow={serverNow} />
+              </>
+            ) : (
+              <>Venció el {formatWhen(bundle.expiresAt)}</>
+            )}
+          </p>
+          {wished.length > 0 ? <p className="text-sm text-amber-100">En tu lista: {wished.map((skin) => skin.name).join(", ")}</p> : null}
+        </div>
+        <NoteSwitch kind="bundle" id={bundle.id} note={bundle.note} subject={bundle.name} />
+        {bundle.skins.length > 0 && foldSkins ? (
+          <details open={skinsOpen}>
+            <summary className="inline-flex cursor-pointer list-none rounded-full bg-white/10 px-3 py-1 text-sm text-zinc-100 marker:content-none [&::-webkit-details-marker]:hidden">
+              Ver las skins ({bundle.skins.length})
+            </summary>
+            <div className="mt-3">{skins}</div>
+          </details>
+        ) : (
+          skins
+        )}
+      </div>
     </section>
   );
 }
@@ -78,7 +86,7 @@ function SkinRow({ skin }: { skin: BundleSkinView }) {
   const rarity = tierColor(skin.edition);
   const frame = rarity ? "border-[3px]" : "border-2 border-white/10";
   return (
-    <li className={`rounded-2xl p-3 ${frame}`} style={rarity ? { borderColor: rarity } : undefined}>
+    <li className={cn("relative rounded-2xl p-3", frame, skin.wished && "rarity-live")} style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}>
       <SkinImage file={skin.imageFile} name={skin.name} />
       <p className="mt-3 font-medium">{skin.name}</p>
       <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>

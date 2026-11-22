@@ -16,7 +16,7 @@ const montserrat = Montserrat({
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Tienda de Valorant",
+  title: "Valorant Store Tracker",
   description: "La tienda diaria, los lotes destacados y la lista de deseos, en esta máquina.",
 };
 

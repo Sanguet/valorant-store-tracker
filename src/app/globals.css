@@ -91,16 +91,16 @@ summary:focus-visible {
 }
 
 .reveal-flash {
-  background: radial-gradient(circle, rgba(250, 214, 99, 0.85), rgba(16, 185, 129, 0.2) 42%, transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--rarity, #fad663) 78%, transparent), transparent 68%);
   animation: reveal-flash 0.7s ease both;
 }
 
 .reveal-burst {
   position: absolute;
   inset: 12%;
-  border: 2px solid #fad663;
+  border: 2px solid var(--rarity, #fad663);
   border-radius: 999px;
-  box-shadow: 0 0 24px #34d399;
+  box-shadow: 0 0 24px var(--rarity, #fad663);
   animation: reveal-burst 0.7s ease both;
 }
 
@@ -263,6 +263,7 @@ summary:focus-visible {
   .reveal-sleeve-card:hover .cover-shine,
   .reveal-sleeve-card:hover .cover-ring,
   .reveal-wished-glow,
+  .rarity-live::after,
   .wish-sweep,
   .tier-detail {
     animation: none;
@@ -275,7 +276,8 @@ summary:focus-visible {
     transition: none;
   }
 
-  .reveal-wished-glow {
+  .reveal-wished-glow,
+  .rarity-live::after {
     opacity: 1;
     box-shadow: inset 0 0 0 2px var(--rarity, #fff), 0 0 12px var(--rarity, #fff);
   }
@@ -293,6 +295,31 @@ summary:focus-visible {
   50% {
     box-shadow: 0 0 14px #ff4655;
   }
+}
+
+.nav-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-scroll::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}
+
+.rarity-live {
+  position: relative;
+}
+
+.rarity-live::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--rarity, #fff), 0 0 14px var(--rarity, #fff);
+  animation: rarity-glow 1.6s ease-in-out infinite;
 }
 
 .nav-view {

@@ -53,6 +53,8 @@ export function RevealCard({
   const rarity = open ? tierColor(offer.edition) : null;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/15";
   const wishedOpen = open && offer.wished;
+  const status = open && trash ? "Basura" : offer.owned ? "Ya es tuya" : offer.wished ? "En tu lista" : null;
+  const statusClass = open && trash ? "bg-[#ff4655]/15 text-[#ffb4bc]" : offer.owned ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-300/15 text-amber-100";
   const coverMotion = animate ? (offer.wished ? "reveal-cover-wish" : "reveal-cover") : open ? "hidden" : "reveal-mark-arrive";
   const covered = !open;
 
@@ -71,7 +73,7 @@ export function RevealCard({
           <div className="relative flex min-h-0 flex-1 flex-col">
             <SkinImage file={offer.imageFile} name={offer.name} fill />
             {open ? (
-              <span className="pointer-events-none absolute top-1.5 right-1.5 rounded-md bg-[#ff4655] px-1.5 py-0.5 text-[11px] font-black tracking-wide text-white shadow-[0_0_16px_rgba(255,70,85,0.55)]">
+              <span className="pointer-events-none absolute top-2 right-2 rounded-md bg-[#ff4655] px-2 py-1 text-base font-black tracking-wide text-white shadow-[0_0_16px_rgba(255,70,85,0.55)]">
                 {discountLabel}
               </span>
             ) : null}
@@ -81,7 +83,7 @@ export function RevealCard({
         )}
         {wishedOpen ? <span className="wish-sweep" aria-hidden /> : null}
         {animate && offer.wished ? <span className="reveal-sheen" aria-hidden /> : null}
-        <div className="flex shrink-0 flex-col gap-1 p-2">
+        <div className="flex shrink-0 flex-col gap-0.5 p-2">
           <div className="flex min-w-0 items-baseline justify-between gap-2">
             <h2 className="truncate text-sm font-semibold">{offer.name}</h2>
             {priceText ? (
@@ -93,16 +95,15 @@ export function RevealCard({
               <p className="shrink-0 text-xs font-medium">{formatVp(offer.priceVp)}</p>
             )}
           </div>
-          <p className="truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition].filter(Boolean).join(" · ")}</p>
-          {detail ? <p className="truncate text-[11px] text-zinc-300">{detail}</p> : null}
-          <div className="flex flex-wrap items-center gap-1">
-            {offer.owned ? <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] text-emerald-200">Ya es tuya</span> : null}
-            {open && trash ? <span className="rounded-full bg-[#ff4655]/15 px-2 py-0.5 text-[11px] text-[#ffb4bc]">Basura</span> : null}
-            {offer.wished ? <span className="rounded-full bg-amber-300/15 px-2 py-0.5 text-[11px] text-amber-100">En tu lista</span> : null}
-            {showNotes ? <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} /> : null}
-            {offer.skinId && !offer.unresolved && !offer.owned ? (
-              <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} compact />
-            ) : null}
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="min-w-0 flex-1 truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition, detail].filter(Boolean).join(" · ")}</p>
+            <div className="flex min-w-0 items-center gap-1">
+              {status ? <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", statusClass)}>{status}</span> : null}
+              {showNotes ? <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} nowrap /> : null}
+              {offer.skinId && !offer.unresolved && !offer.owned ? (
+                <WishlistButton skinId={offer.skinId} name={offer.name} wished={offer.wished} compact />
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

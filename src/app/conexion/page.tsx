@@ -27,9 +27,8 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">La tienda se lee con el Riot Client abierto en esta máquina.</p>
         <p className="mt-2 text-sm text-zinc-300">Perfil abierto: {accountLabel(account)}</p>
       </div>
-      <section className="max-w-2xl rounded-3xl border border-[#ff4655] p-5">
+      <section className="max-w-2xl rounded-3xl border border-white/10 p-5">
         <h2 className="text-lg font-medium">Riot Client local</h2>
-        <p className="mt-1 text-sm font-medium text-white">En uso</p>
         <p className="mt-2 text-sm text-zinc-400">
           El cliente tiene que estar abierto e iniciado. La app lee el lockfile. No hay usuario ni contraseña.
         </p>
@@ -40,9 +39,9 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
           <p className="mt-2 text-sm text-zinc-400">Cada cuenta del Riot Client guarda su tienda, su historial, sus deseos y sus notas. Cambiar de cuenta no borra las otras.</p>
           <ul className="mt-3 grid gap-2 text-sm">
             {profiles.map((profile) => (
-              <li key={profile.puuid} className="text-zinc-200">
-                {profile.label}
-                {profile.active ? " · abierto" : ""}
+              <li key={profile.puuid} className="flex items-center gap-2 text-zinc-200">
+                <span>{profile.label}</span>
+                {profile.active ? <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-zinc-950">Abierto</span> : null}
               </li>
             ))}
           </ul>
@@ -55,7 +54,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
           <label htmlFor="locale" className="text-sm text-zinc-300">
             Idioma
           </label>
-          <select id="locale" name="locale" defaultValue={settings.locale} className="rounded-2xl border border-white/10 bg-black/30 px-4 py-3">
+          <select id="locale" name="locale" defaultValue={settings.locale} className="rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-zinc-100">
             {LANGUAGE_OPTIONS.map((language) => (
               <option key={language} value={language}>
                 {languageLabel(language)}
@@ -80,7 +79,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
         </section>
       )}
       {exampleError && account ? <FormAlert>{exampleError}</FormAlert> : null}
-      <section className="rounded-3xl border border-white/10 p-5">
+      <section className="mt-8 rounded-3xl border border-white/10 p-5">
         <h2 className="text-lg font-medium">Borrar los datos de este perfil</h2>
         <p className="mt-2 text-sm text-zinc-400">Borra la tienda, el historial, los deseos y las notas de este perfil. Los demás perfiles quedan.</p>
         {resetError ? (

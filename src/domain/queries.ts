@@ -32,7 +32,7 @@ export interface CycleView {
 export interface CycleSummary {
   id: number;
   expiresAt: string;
-  offers: { name: string; imageFile: string | null; wished: boolean }[];
+  offers: { name: string; imageFile: string | null; wished: boolean; edition: string | null; note: OfferNote }[];
 }
 
 export interface HistoryItem {
@@ -269,7 +269,7 @@ export function getHistory(sql: Sql): HistoryItem[] {
         cycle: {
           id: cycle.id,
           expiresAt: cycle.expiresAt,
-          offers: cycle.offers.map((offer) => ({ name: offer.name, imageFile: offer.imageFile, wished: offer.wished })),
+          offers: cycle.offers.map((offer) => ({ name: offer.name, imageFile: offer.imageFile, wished: offer.wished, edition: offer.edition, note: offer.note })),
         },
       });
     }

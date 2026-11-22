@@ -1,18 +1,20 @@
+import type { CSSProperties } from "react";
 import { NoteSwitch } from "@/components/note-switch";
 import { SkinImage } from "@/components/skin-image";
 import { WishlistButton } from "@/components/wishlist-button";
 import { tierColor } from "@/domain/catalog";
 import { formatVp } from "@/domain/text";
 import type { OfferView } from "@/domain/queries";
+import { cn } from "@/lib/cn";
 
 export function OfferCard({ offer, large = false, heading = "h2" }: { offer: OfferView; large?: boolean; heading?: "h2" | "h3" }) {
-  const rarity = large ? tierColor(offer.edition) : null;
+  const rarity = tierColor(offer.edition);
   const Heading = heading;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/10";
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-3xl bg-[#141922] ${frame}`}
-      style={rarity ? { borderColor: rarity } : undefined}
+      className={cn("relative flex flex-col overflow-hidden rounded-3xl bg-[#141922]", frame, offer.wished && "rarity-live")}
+      style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}
     >
       <SkinImage file={offer.imageFile} name={offer.name} large={large} />
       <div className={`flex flex-1 flex-col gap-3 ${large ? "p-5" : "p-4"}`}>
