@@ -226,3 +226,24 @@ summary:focus-visible {
     transition: none;
   }
 }
+
+.night-glow {
+  animation: night-glow 1.4s ease-in-out infinite;
+}
+
+@keyframes night-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px #ff4655;
+  }
+  50% {
+    box-shadow: 0 0 14px #ff4655;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .night-glow {
+    animation: none;
+    box-shadow: 0 0 8px #ff4655;
+  }
+}

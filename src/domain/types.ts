@@ -13,6 +13,16 @@ export interface SnapshotOffer {
   unresolved: boolean;
 }
 
+export interface SnapshotNightOffer extends SnapshotOffer {
+  discountPercent: number | null;
+  finalVp: number | null;
+}
+
+export interface SnapshotNight {
+  remainingSeconds: number;
+  offers: SnapshotNightOffer[];
+}
+
 export interface SnapshotBundle {
   bundleKey: string;
   instanceId: string | null;
@@ -38,6 +48,7 @@ export interface Snapshot {
   ownedSkinIds: string[] | null;
   daily: { remainingSeconds: number; offers: SnapshotOffer[] } | null;
   bundles: SnapshotBundle[];
+  night: SnapshotNight | null;
 }
 
 export interface Account {

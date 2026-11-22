@@ -3,12 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toApiLanguage } from "@/domain/language";
+import { drawNightMarket, nightPool } from "@/domain/night-market";
+import { getNightView } from "@/domain/queries";
 import {
   addWishlist,
   rememberCatalogSkin,
   removeWishlist,
   removeWishlistSkin,
   resetStore,
+  saveNightSim,
   setBundleNote,
   setLocale,
   setOfferNote,
@@ -21,6 +24,7 @@ import { readStoreCatalog } from "@/server/valorant";
 
 function refreshPages() {
   revalidatePath("/", "layout");
+  revalidatePath("/mercado");
 }
 
 export async function refreshAction() {
@@ -80,6 +84,34 @@ export async function addCatalogSkinAction(skinId: string) {
   saveSql();
   refreshPages();
   return { ok: true as const };
+}
+
+export async function simulateNightAction() {
+  const sql = await getSql();
+  const now = new Date();
+  const view = getNightView(sql, now);
+  if (!view.resetAt || view.simulationLocked) {
+    refreshPages();
+    return;
+  }
+  const drawn = drawNightMarket(nightPool(await readStoreCatalog(sql)), Math.random);
+  if (drawn.length === 0 || !saveNightSim(sql, view.resetAt, drawn, now)) {
+    refreshPages();
+    return;
+  }
+  for (const offer of drawn) {
+    rememberCatalogSkin(sql, {
+      skinId: offer.skinId,
+      levelId: offer.levelId,
+      name: offer.name,
+      weaponName: offer.weaponName,
+      edition: offer.edition,
+      imageUrl: offer.imageUrl,
+    });
+  }
+  await cacheImages(sql);
+  saveSql();
+  refreshPages();
 }
 
 export async function removeWishlistAction(id: number) {

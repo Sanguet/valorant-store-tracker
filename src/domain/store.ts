@@ -1,5 +1,6 @@
 import { fold } from "@/domain/text";
 import { transaction, type Sql, type SqlValue } from "@/domain/sql";
+import type { NightCandidate } from "@/domain/night-market";
 import type { Account, OfferNote, ReaderChoice, Settings, Snapshot, SnapshotOffer } from "@/domain/types";
 
 const TOLERANCE_MS = 180_000;
@@ -254,7 +255,7 @@ export function recordSnapshot(sql: Sql, snapshot: Snapshot): RecordResult {
       );
     }
 
-    const skins = [...(snapshot.daily?.offers ?? []), ...snapshot.bundles.flatMap((bundle) => bundle.skins)];
+    const skins = [...(snapshot.daily?.offers ?? []), ...snapshot.bundles.flatMap((bundle) => bundle.skins), ...(snapshot.night?.offers ?? [])];
     for (const skin of skins) upsertSkin(sql, skin);
     applyOwnership(sql, snapshot.ownedSkinIds, snapshot.readAt);
 
@@ -301,6 +302,18 @@ export function recordSnapshot(sql: Sql, snapshot: Snapshot): RecordResult {
       bundlesCreated += 1;
     }
 
+    sql.run("DELETE FROM night_market");
+    if (snapshot.night) {
+      const expiresAt = expiry(snapshot.readAt, snapshot.night.remainingSeconds);
+      snapshot.night.offers.forEach((offer, position) => {
+        sql.run(
+          `INSERT INTO night_market (expires_at, position, skin_id, level_id, name, weapon_name, edition, price_vp, discount_percent, final_vp)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [expiresAt, position, offer.skinId, offer.levelId, offer.name, offer.weaponName, offer.edition, offer.priceVp, offer.discountPercent, offer.finalVp],
+        );
+      });
+    }
+
     return { ok: true as const, daily, bundlesCreated };
   });
 }
@@ -311,6 +324,22 @@ export function setOfferNote(sql: Sql, offerId: number, note: OfferNote | null) 
 
 export function setBundleNote(sql: Sql, bundleId: number, note: OfferNote | null) {
   sql.run("UPDATE bundles SET note = ? WHERE id = ?", [note, bundleId]);
+}
+
+export function saveNightSim(sql: Sql, expiresAt: string, offers: NightCandidate[], now: Date): boolean {
+  const existing = sql.get<{ expires_at: string }>("SELECT expires_at FROM night_sim WHERE expires_at = ?", [expiresAt]);
+  if (existing) return false;
+  const payload = offers.map((offer) => ({
+    skinId: offer.skinId,
+    levelId: offer.levelId,
+    name: offer.name,
+    weaponName: offer.weaponName,
+    edition: offer.edition,
+    tier: offer.tier,
+    priceVp: offer.priceVp,
+  }));
+  sql.run("INSERT INTO night_sim (expires_at, created_at, offers_json) VALUES (?, ?, ?)", [expiresAt, now.toISOString(), JSON.stringify(payload)]);
+  return true;
 }
 
 export function rememberCatalogSkin(sql: Sql, skin: { skinId: string; levelId: string | null; name: string; weaponName: string; edition: string | null; imageUrl: string | null }) {

@@ -126,6 +126,26 @@ CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS night_market (
+  expires_at TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  skin_id TEXT,
+  level_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  weapon_name TEXT,
+  edition TEXT,
+  price_vp INTEGER NOT NULL,
+  discount_percent INTEGER,
+  final_vp INTEGER,
+  PRIMARY KEY (expires_at, position)
+);
+
+CREATE TABLE IF NOT EXISTS night_sim (
+  expires_at TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  offers_json TEXT NOT NULL
+);
 `;
 
 export function migrate(sql: Sql) {

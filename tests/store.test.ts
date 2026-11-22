@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
-import { getBundleList, getHistory, getHome, getWishlist } from "@/domain/queries";
-import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, setBundleNote, setOfferNote } from "@/domain/store";
+import { getBundleList, getHistory, getHome, getNightView, getWishlist } from "@/domain/queries";
+import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, saveNightSim, setBundleNote, setOfferNote } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -40,6 +40,7 @@ function remoteSnapshot(readAt: string, remainingSeconds: number, puuid = "aaaaa
       ],
     },
     bundles: [],
+    night: null,
   };
 }
 
@@ -170,5 +171,49 @@ describe("store", () => {
     const again = addWishlist(sql, { skinId: demoSkins.vandalPrime.skinId, name: "Vándalo Prime" }, now);
     expect(again).toEqual({ ok: false, reason: "owned" });
     expect(getHome(sql, now).currentCycle?.offers[0].wished).toBe(false);
+  });
+
+  it("keeps one night simulation per daily reset and drops a real market when the next read has none", async () => {
+    const sql = await memorySql();
+    const created = recordSnapshot(sql, {
+      ...remoteSnapshot("2026-11-21T15:00:00.000Z", 72000),
+      night: {
+        remainingSeconds: 3600,
+        offers: [
+          {
+            levelId: demoSkins.vandalPrime.levelId,
+            skinId: demoSkins.vandalPrime.skinId,
+            name: demoSkins.vandalPrime.name,
+            weaponName: demoSkins.vandalPrime.weaponName,
+            edition: demoSkins.vandalPrime.edition,
+            priceVp: 1775,
+            imageUrl: null,
+            unresolved: false,
+            discountPercent: 20,
+            finalVp: 1420,
+          },
+        ],
+      },
+    });
+    expect(created.ok).toBe(true);
+    const resetAt = getHome(sql, now).currentCycle!.expiresAt;
+    expect(getNightView(sql, now).real?.offers[0]).toMatchObject({ name: "Vándalo Prime", discountPercent: 20, finalVp: 1420 });
+    const candidate = {
+      skinId: demoSkins.sheriffIon.skinId,
+      levelId: demoSkins.sheriffIon.levelId,
+      name: demoSkins.sheriffIon.name,
+      weaponName: demoSkins.sheriffIon.weaponName,
+      edition: demoSkins.sheriffIon.edition,
+      tier: "select" as const,
+      priceVp: 875,
+      imageUrl: null,
+    };
+    expect(saveNightSim(sql, resetAt, [candidate], now)).toBe(true);
+    expect(saveNightSim(sql, resetAt, [candidate], now)).toBe(false);
+    expect(getNightView(sql, now).simulation?.map((offer) => offer.name)).toEqual(["Sheriff Ion"]);
+    recordSnapshot(sql, remoteSnapshot("2026-11-21T16:00:00.000Z", 68400));
+    const after = getNightView(sql, now);
+    expect(after.real).toBeNull();
+    expect(after.simulationLocked).toBe(true);
   });
 });

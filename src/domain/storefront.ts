@@ -1,5 +1,5 @@
 import { offerFromSkin, SKIN_ITEM_TYPE, type Catalog, type CatalogIndex, indexCatalog, lookupSkin } from "@/domain/catalog";
-import type { SnapshotBundle, SnapshotOffer } from "@/domain/types";
+import type { SnapshotBundle, SnapshotNight, SnapshotNightOffer, SnapshotOffer } from "@/domain/types";
 
 export function priceOfCost(cost: Record<string, number> | null | undefined): number | null {
   if (!cost) return null;
@@ -29,7 +29,22 @@ interface RawBundle {
   DurationRemainingInSeconds?: number;
 }
 
+interface RawReward {
+  ItemTypeID?: string;
+  ItemID?: string;
+}
+
+interface RawBonusOffer {
+  Offer?: { OfferID?: string; Cost?: Record<string, number>; Rewards?: RawReward[] };
+  DiscountPercent?: number;
+  DiscountCosts?: Record<string, number>;
+}
+
 interface RawStorefront {
+  BonusStore?: {
+    BonusStoreOffers?: RawBonusOffer[];
+    BonusStoreRemainingDurationInSeconds?: number;
+  };
   SkinsPanelLayout?: {
     SingleItemOffers?: string[];
     SingleItemStoreOffers?: RawOffer[];
@@ -45,6 +60,42 @@ interface RawStorefront {
 export interface ParsedStorefront {
   daily: { remainingSeconds: number; offers: SnapshotOffer[] } | null;
   bundles: SnapshotBundle[];
+  night: SnapshotNight | null;
+}
+
+function discountPercent(value: number | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const percent = value > 0 && value <= 1 ? Math.round(value * 100) : Math.round(value);
+  return percent;
+}
+
+function bonusLevelId(offer: RawBonusOffer): string | null {
+  const rewards = offer.Offer?.Rewards ?? [];
+  const skin = rewards.find((reward) => reward.ItemTypeID?.toLowerCase() === SKIN_ITEM_TYPE);
+  const id = skin?.ItemID ?? rewards[0]?.ItemID ?? offer.Offer?.OfferID;
+  return id ? id.toLowerCase() : null;
+}
+
+function parseNight(body: RawStorefront, index: CatalogIndex): SnapshotNight | null {
+  const offers = body.BonusStore?.BonusStoreOffers;
+  if (!offers || offers.length === 0) return null;
+  const parsed: SnapshotNightOffer[] = [];
+  for (const offer of offers) {
+    const levelId = bonusLevelId(offer);
+    if (!levelId) continue;
+    const resolved = lookupSkin(index, levelId);
+    const base = offerFromSkin(levelId, resolved, priceOfCost(offer.Offer?.Cost) ?? 0);
+    parsed.push({
+      ...base,
+      discountPercent: discountPercent(offer.DiscountPercent),
+      finalVp: priceOfCost(offer.DiscountCosts),
+    });
+  }
+  if (parsed.length === 0) return null;
+  return {
+    remainingSeconds: body.BonusStore?.BonusStoreRemainingDurationInSeconds ?? 0,
+    offers: parsed,
+  };
 }
 
 function bundlePrice(bundle: RawBundle): number {
@@ -81,7 +132,7 @@ function toBundle(bundle: RawBundle, index: CatalogIndex, parentRemaining: numbe
 
 export function parseStorefront(raw: unknown, catalog: Catalog): ParsedStorefront {
   const index = indexCatalog(catalog);
-  if (!raw || typeof raw !== "object") return { daily: null, bundles: [] };
+  if (!raw || typeof raw !== "object") return { daily: null, bundles: [], night: null };
   const body = raw as RawStorefront;
   const layout = body.SkinsPanelLayout;
   let daily: ParsedStorefront["daily"] = null;
@@ -108,5 +159,5 @@ export function parseStorefront(raw: unknown, catalog: Catalog): ParsedStorefron
     seen.add(parsed.bundleKey);
     bundles.push(parsed);
   }
-  return { daily, bundles };
+  return { daily, bundles, night: parseNight(body, index) };
 }

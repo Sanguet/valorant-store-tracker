@@ -32,6 +32,7 @@ export function loadFixture(sql: Sql, now = new Date()): RecordResult {
       ownedSkinIds,
       daily: parsed.daily,
       bundles: parsed.bundles,
+      night: parsed.night,
     };
     last = recordSnapshot(sql, snapshot);
     if (!last.ok) return last;

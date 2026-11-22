@@ -427,3 +427,125 @@ export function getWishlist(sql: Sql, now: Date): WishlistItemView[] {
     };
   });
 }
+
+export interface NightSimCard {
+  skinId: string;
+  name: string;
+  weaponName: string;
+  edition: string | null;
+  tier: "select" | "deluxe" | "premium";
+  priceVp: number;
+  imageFile: string | null;
+  owned: boolean;
+  wished: boolean;
+}
+
+export interface NightRealCard {
+  skinId: string | null;
+  name: string;
+  weaponName: string | null;
+  edition: string | null;
+  priceVp: number;
+  discountPercent: number | null;
+  finalVp: number | null;
+  imageFile: string | null;
+  owned: boolean;
+  wished: boolean;
+}
+
+export interface NightView {
+  resetAt: string | null;
+  simulation: NightSimCard[] | null;
+  simulationLocked: boolean;
+  real: { expiresAt: string; offers: NightRealCard[] } | null;
+}
+
+function laterExpiry(rows: { expires_at: string }[], now: Date): string | null {
+  const active = rows.filter((row) => new Date(row.expires_at).getTime() > now.getTime());
+  active.sort((a, b) => (a.expires_at < b.expires_at ? 1 : -1));
+  return active[0]?.expires_at ?? null;
+}
+
+function isNightTier(value: unknown): value is NightSimCard["tier"] {
+  return value === "select" || value === "deluxe" || value === "premium";
+}
+
+function parseSim(raw: string, flags: Flags, images: Map<string, string | null>): NightSimCard[] | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return null;
+    const cards: NightSimCard[] = [];
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      if (typeof row.skinId !== "string" || typeof row.name !== "string" || typeof row.weaponName !== "string") return null;
+      if (!isNightTier(row.tier) || typeof row.priceVp !== "number") return null;
+      cards.push({
+        skinId: row.skinId,
+        name: row.name,
+        weaponName: row.weaponName,
+        edition: typeof row.edition === "string" ? row.edition : null,
+        tier: row.tier,
+        priceVp: row.priceVp,
+        imageFile: images.get(row.skinId) ?? null,
+        owned: isOwned(flags, row.skinId, null),
+        wished: isWished(flags, row.skinId, row.name),
+      });
+    }
+    return cards;
+  } catch {
+    return null;
+  }
+}
+
+export function getNightView(sql: Sql, now: Date): NightView {
+  const flags = flagsOf(sql);
+  const images = new Map(
+    sql
+      .all<{ skin_id: string; image_file: string | null }>("SELECT skin_id, image_file FROM skins")
+      .map((row) => [row.skin_id, text(row.image_file)]),
+  );
+  const resetAt = laterExpiry(sql.all<{ expires_at: string }>("SELECT expires_at FROM cycles"), now);
+  let simulation: NightSimCard[] | null = null;
+  let simulationLocked = false;
+  if (resetAt) {
+    const saved = sql.get<{ offers_json: string }>("SELECT offers_json FROM night_sim WHERE expires_at = ?", [resetAt]);
+    if (saved) {
+      simulationLocked = true;
+      simulation = parseSim(saved.offers_json, flags, images);
+    }
+  }
+  const marketExpiry = laterExpiry(sql.all<{ expires_at: string }>("SELECT DISTINCT expires_at FROM night_market"), now);
+  const real = marketExpiry
+    ? {
+        expiresAt: marketExpiry,
+        offers: sql
+          .all<{
+            skin_id: string | null;
+            name: string;
+            weapon_name: string | null;
+            edition: string | null;
+            price_vp: number;
+            discount_percent: number | null;
+            final_vp: number | null;
+          }>("SELECT skin_id, name, weapon_name, edition, price_vp, discount_percent, final_vp FROM night_market WHERE expires_at = ? ORDER BY position", [marketExpiry])
+          .map((row) => {
+            const skinId = text(row.skin_id);
+            const name = String(row.name);
+            return {
+              skinId,
+              name,
+              weaponName: text(row.weapon_name),
+              edition: text(row.edition),
+              priceVp: num(row.price_vp),
+              discountPercent: typeof row.discount_percent === "number" ? row.discount_percent : null,
+              finalVp: typeof row.final_vp === "number" ? row.final_vp : null,
+              imageFile: skinId ? (images.get(skinId) ?? null) : null,
+              owned: isOwned(flags, skinId, null),
+              wished: isWished(flags, skinId, name),
+            };
+          }),
+      }
+    : null;
+  return { resetAt, simulation, simulationLocked, real };
+}

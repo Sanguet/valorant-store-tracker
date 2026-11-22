@@ -267,7 +267,7 @@ function buildSnapshot(input: {
 }): ReadSuccess {
   const parsed = parseStorefront(input.storefront, input.catalog);
   const index = indexCatalog(input.catalog);
-  const offers = [...(parsed.daily?.offers ?? []), ...parsed.bundles.flatMap((bundle) => bundle.skins)];
+  const offers = [...(parsed.daily?.offers ?? []), ...parsed.bundles.flatMap((bundle) => bundle.skins), ...(parsed.night?.offers ?? [])];
   return {
     ok: true,
     snapshot: {
@@ -283,6 +283,7 @@ function buildSnapshot(input: {
       ownedSkinIds: input.owned ? expandOwnedIds(input.owned, index) : null,
       daily: parsed.daily,
       bundles: parsed.bundles,
+      night: parsed.night,
     },
     storefrontVersion: "v3",
     locale: null,

@@ -18,10 +18,12 @@ export async function getSql(): Promise<Sql> {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const bytes = fs.existsSync(file) ? fs.readFileSync(file) : undefined;
     const opened = await openSql(bytes);
-    migrate(opened.sql);
     globalForDb.store = opened;
+    migrate(opened.sql);
     saveSql();
+    return opened.sql;
   }
+  migrate(globalForDb.store.sql);
   return globalForDb.store.sql;
 }
 

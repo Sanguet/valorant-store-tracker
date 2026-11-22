@@ -90,6 +90,37 @@ describe("parsers", () => {
       demo.catalog,
     );
     expect(parsed.daily?.offers[0].priceVp).toBe(875);
+    expect(parsed.night).toBeNull();
+  });
+
+  it("reads a night market offer from BonusStore", () => {
+    const vp = "85ad13f7-3d1b-5128-9eb2-7cd8ee0b5741";
+    const parsed = parseStorefront(
+      {
+        BonusStore: {
+          BonusStoreRemainingDurationInSeconds: 1000,
+          BonusStoreOffers: [
+            {
+              Offer: {
+                OfferID: "offer-1",
+                Cost: { [vp]: 1775 },
+                Rewards: [{ ItemTypeID: "e7c63390-eda7-46e0-bb7a-a6abdacd2433", ItemID: demoSkins.vandalPrime.levelId, Quantity: 1 }],
+              },
+              DiscountPercent: 20,
+              DiscountCosts: { [vp]: 1420 },
+            },
+          ],
+        },
+      },
+      demo.catalog,
+    );
+    expect(parsed.night?.remainingSeconds).toBe(1000);
+    expect(parsed.night?.offers[0]).toMatchObject({
+      name: "Vándalo Prime",
+      priceVp: 1775,
+      discountPercent: 20,
+      finalVp: 1420,
+    });
   });
 
   it("builds a catalog from the valorant-api shape", () => {
