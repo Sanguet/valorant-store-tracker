@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Remaining } from "@/components/countdown";
 import { NoteSwitch } from "@/components/note-switch";
 import { SkinImage } from "@/components/skin-image";
+import { ZoomableSkin } from "@/components/skin-zoom";
 import { WishlistButton } from "@/components/wishlist-button";
 import { tierColor } from "@/domain/catalog";
 import { formatVp, formatWhen } from "@/domain/text";
@@ -46,7 +47,9 @@ export function BundlePanel({
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#141922]">
       <div className="bg-black">
         {bundle.imageFile ? (
-          <img src={`/imagen/${bundle.imageFile}`} alt="" className="h-44 w-full origin-center scale-125 object-contain object-center" />
+          <ZoomableSkin name={bundle.name} detail={formatVp(bundle.priceVp)} imageFile={bundle.imageFile}>
+            <img src={`/imagen/${bundle.imageFile}`} alt="" className="h-44 w-full origin-center scale-125 object-contain object-center" />
+          </ZoomableSkin>
         ) : (
           <div className="grid h-44 place-items-center text-2xl text-zinc-500">{bundle.name.slice(0, 1)}</div>
         )}
@@ -87,7 +90,9 @@ function SkinRow({ skin }: { skin: BundleSkinView }) {
   const frame = rarity ? "border-[3px]" : "border-2 border-white/10";
   return (
     <li className={cn("relative rounded-2xl p-3", frame, skin.wished && "rarity-live")} style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}>
-      <SkinImage file={skin.imageFile} name={skin.name} />
+      <ZoomableSkin name={skin.name} edition={skin.edition} detail={[skin.weaponName, skin.edition].filter(Boolean).join(" · ")} imageFile={skin.imageFile}>
+        <SkinImage file={skin.imageFile} name={skin.name} />
+      </ZoomableSkin>
       <p className="mt-3 font-medium">{skin.name}</p>
       <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
       <div className="mt-2 flex flex-wrap gap-2 text-xs">

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addCatalogSkinAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
+import { ZoomableSkin } from "@/components/skin-zoom";
 import { catalogNameMatches, catalogSkinsByWeapon, EDITION_FILTERS, tierColor, type SkinTier, type WeaponChoice, type WishlistSkin } from "@/domain/catalog";
 import { fold } from "@/domain/text";
 import { cn } from "@/lib/cn";
@@ -147,13 +148,13 @@ function SkinCard({ skin, already, owned, pending, disabled, onAdd }: { skin: Wi
   const color = tierColor(skin.edition);
   return (
     <li className={cn("flex flex-col overflow-hidden rounded-2xl border-2 bg-black/20", already && "rarity-live")} style={{ borderColor: color ?? "rgba(255,255,255,0.16)", "--rarity": color ?? "#ffffff" } as CSSProperties}>
-      <div className="flex h-48 items-center justify-center bg-black/30 p-3">
+      <ZoomableSkin name={skin.name} edition={skin.edition} detail={[skin.weaponName, skin.edition].filter(Boolean).join(" · ")} imageSrc={skin.imageUrl} className="flex h-48 items-center justify-center bg-black/30 p-3">
         {skin.imageUrl ? (
           <img src={skin.imageUrl} alt="" width={480} height={270} className="h-full w-full object-contain object-center" />
         ) : (
           <span aria-hidden className="text-3xl text-zinc-500">{skin.name.slice(0, 1)}</span>
         )}
-      </div>
+      </ZoomableSkin>
       <div className="flex flex-1 flex-col gap-2 p-3">
         <p className="text-sm leading-tight text-zinc-200">{skin.name}</p>
         <p className="text-xs text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>

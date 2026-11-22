@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
 import { getBundleList, getHistory, getHome, getNightView, getWishlist } from "@/domain/queries";
-import { addWishlist, fillNightDiscounts, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, saveNightSim, setBundleNote, setOfferNote } from "@/domain/store";
+import { addWishlist, fillNightDiscounts, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, saveNightSim, setBundleNote, setOfferNote, setSkinGrade, syncWishlistWithGrade } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -225,5 +225,40 @@ describe("store", () => {
     const after = getNightView(sql, now);
     expect(after.real).toBeNull();
     expect(after.simulationLocked).toBe(true);
+  });
+
+  it("keeps S and A on the wishlist and removes a skin that leaves those rows", async () => {
+    const sql = await memorySql();
+    const skin = { skinId: "skin-letra", name: "Classic Letra" };
+    const other = { skinId: "skin-b", name: "Classic B" };
+    addWishlist(sql, other, now);
+    setSkinGrade(sql, skin.skinId, "S", now);
+    syncWishlistWithGrade(sql, skin, null, "S", now);
+    expect(getWishlist(sql, now).map((item) => item.skinId)).toContain(skin.skinId);
+
+    setSkinGrade(sql, skin.skinId, "A", now);
+    syncWishlistWithGrade(sql, skin, "S", "A", now);
+    expect(getWishlist(sql, now).some((item) => item.skinId === skin.skinId)).toBe(true);
+
+    setSkinGrade(sql, skin.skinId, "B", now);
+    syncWishlistWithGrade(sql, skin, "A", "B", now);
+    expect(getWishlist(sql, now).some((item) => item.skinId === skin.skinId)).toBe(false);
+    expect(getWishlist(sql, now).some((item) => item.skinId === other.skinId)).toBe(true);
+
+    addWishlist(sql, skin, now);
+    setSkinGrade(sql, skin.skinId, null, now);
+    syncWishlistWithGrade(sql, skin, "B", null, now);
+    expect(getWishlist(sql, now).some((item) => item.skinId === skin.skinId)).toBe(true);
+
+    setSkinGrade(sql, skin.skinId, "S", now);
+    syncWishlistWithGrade(sql, skin, null, "S", now);
+    setSkinGrade(sql, skin.skinId, null, now);
+    syncWishlistWithGrade(sql, skin, "S", null, now);
+    expect(getWishlist(sql, now).some((item) => item.skinId === skin.skinId)).toBe(false);
+
+    addWishlist(sql, skin, now);
+    setSkinGrade(sql, skin.skinId, "F", now);
+    syncWishlistWithGrade(sql, skin, "B", "F", now);
+    expect(getWishlist(sql, now).some((item) => item.skinId === skin.skinId)).toBe(false);
   });
 });

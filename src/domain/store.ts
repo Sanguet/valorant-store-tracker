@@ -387,6 +387,19 @@ export function setSkinGrade(sql: Sql, skinId: string, grade: string | null, now
   );
 }
 
+export function gradeOf(sql: Sql, skinId: string): string | null {
+  const row = sql.get<{ grade: string }>("SELECT grade FROM skin_grade WHERE skin_id = ?", [skinId]);
+  return row && GRADES.has(row.grade) ? row.grade : null;
+}
+
+export function syncWishlistWithGrade(sql: Sql, skin: { skinId: string; name: string }, previous: string | null, next: string | null, now: Date) {
+  if (next === "S" || next === "A") {
+    addWishlist(sql, { skinId: skin.skinId, name: skin.name }, now);
+    return;
+  }
+  if (next === "F" || previous === "S" || previous === "A") removeWishlistSkin(sql, skin.skinId);
+}
+
 export function rememberCatalogSkin(sql: Sql, skin: { skinId: string; levelId: string | null; name: string; weaponName: string; edition: string | null; imageUrl: string | null }) {
   sql.run(
     `INSERT INTO skins (skin_id, level_id, name, weapon_name, edition, image_url)

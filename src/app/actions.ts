@@ -7,6 +7,7 @@ import { drawNightMarket, nightPool, rollDiscountPercent } from "@/domain/night-
 import { getNightView } from "@/domain/queries";
 import {
   addWishlist,
+  gradeOf,
   rememberCatalogSkin,
   removeWishlist,
   removeWishlistSkin,
@@ -14,6 +15,7 @@ import {
   fillNightDiscounts,
   saveNightSim,
   setSkinGrade,
+  syncWishlistWithGrade,
   setBundleNote,
   setLocale,
   setOfferNote,
@@ -97,9 +99,10 @@ export async function setGradeAction(skinId: string, grade: string | null) {
   const skin = (await readStoreCatalog(sql)).skins.find((item) => item.skinId === skinId.toLowerCase() && item.tier);
   if (!skin) return;
   const next = grade && GRADES.has(grade) ? grade : null;
-  setSkinGrade(sql, skin.skinId, next, new Date());
-  if (next === "S" || next === "A") addWishlist(sql, { skinId: skin.skinId, name: skin.name }, new Date());
-  if (next === "F") removeWishlistSkin(sql, skin.skinId);
+  const previous = gradeOf(sql, skin.skinId);
+  const now = new Date();
+  setSkinGrade(sql, skin.skinId, next, now);
+  syncWishlistWithGrade(sql, { skinId: skin.skinId, name: skin.name }, previous, next, now);
   rememberCatalogSkin(sql, {
     skinId: skin.skinId,
     levelId: skin.levelIds[0] ?? skin.skinId,

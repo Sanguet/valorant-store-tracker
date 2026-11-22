@@ -22,7 +22,7 @@ function simFace(offer: NightSimCard, index: number): NightFace {
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
-    trash: false,
+    grade: null,
   };
 }
 
@@ -42,7 +42,7 @@ function realFace(offer: NightRealCard, index: number): NightFace {
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
-    trash: false,
+    grade: null,
   };
 }
 
@@ -57,10 +57,10 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
     night = getNightView(sql, now);
   }
   const account = getAccount(sql);
-  const trashIds = new Set(listGrades(sql).flatMap((grade) => (grade.grade === "F" ? [grade.skinId] : [])));
+  const grades = new Map(listGrades(sql).map((grade) => [grade.skinId, grade.grade]));
   const faces = (mode === "real" && night.real ? night.real.offers.map(realFace) : (night.simulation ?? []).map(simFace)).map((face) => ({
     ...face,
-    trash: Boolean(face.skinId && trashIds.has(face.skinId)),
+    grade: face.skinId ? grades.get(face.skinId) ?? null : null,
   }));
   const expiresAt = mode === "real" ? (night.real?.expiresAt ?? null) : night.resetAt;
   const revealId = revealKey(`${mode}:${expiresAt ?? "sin-reinicio"}`);

@@ -119,6 +119,33 @@ summary:focus-visible {
   animation: reveal-particle 0.8s ease-out both;
 }
 
+.trash-stamp {
+  pointer-events: none;
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  translate: -50% -50%;
+  rotate: -14deg;
+  border: 3px solid #ffb4bc;
+  border-radius: 0.4rem;
+  background: rgb(9 11 16 / 0.55);
+  padding: 0.15rem 0.55rem;
+  color: #ffb4bc;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.trash-stamp-in {
+  animation: trash-stamp 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes trash-stamp {
+  from { opacity: 0; scale: 1.8; }
+  to { opacity: 1; scale: 1; }
+}
+
 .reveal-sheen {
   pointer-events: none;
   position: absolute;
@@ -269,7 +296,8 @@ summary:focus-visible {
   .reveal-wished-glow,
   .rarity-live::after,
   .wish-sweep,
-  .tier-detail {
+  .tier-detail,
+  .trash-stamp-in {
     animation: none;
   }
 

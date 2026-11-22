@@ -1,10 +1,12 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { NoteSwitch } from "@/components/note-switch";
 import { SkinImage } from "@/components/skin-image";
+import { SkinZoom } from "@/components/skin-zoom";
 import { WishlistButton } from "@/components/wishlist-button";
 import { tierColor } from "@/domain/catalog";
+import { GRADE_COLORS, gradeLetter } from "@/domain/tierlist";
 import type { OfferView } from "@/domain/queries";
 import { formatVp } from "@/domain/text";
 import { cn } from "@/lib/cn";
@@ -34,7 +36,7 @@ export function RevealCard({
   priceText = null,
   listPriceText = null,
   discountLabel = null,
-  trash = false,
+  grade = null,
 }: {
   offer: OfferView;
   open: boolean;
@@ -48,11 +50,14 @@ export function RevealCard({
   priceText?: string | null;
   listPriceText?: string | null;
   discountLabel?: string | null;
-  trash?: boolean;
+  grade?: string | null;
 }) {
+  const [zoomed, setZoomed] = useState(false);
   const rarity = open ? tierColor(offer.edition) : null;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/15";
   const wishedOpen = open && offer.wished;
+  const letter = open ? gradeLetter(grade) : null;
+  const trash = letter === "F";
   const status = open && trash ? "Basura" : offer.owned ? "Ya es tuya" : offer.wished ? "En tu lista" : null;
   const statusClass = open && trash ? "bg-[#ff4655]/15 text-[#ffb4bc]" : offer.owned ? "bg-emerald-400/15 text-emerald-200" : "bg-amber-300/15 text-amber-100";
   const coverMotion = animate ? (offer.wished ? "reveal-cover-wish" : "reveal-cover") : open ? "hidden" : "reveal-mark-arrive";
@@ -69,17 +74,12 @@ export function RevealCard({
       style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}
     >
       <div inert={!open} aria-hidden={!open} className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[inherit]">
-        {discountLabel ? (
-          <div className="relative flex min-h-0 flex-1 flex-col">
-            <SkinImage file={offer.imageFile} name={offer.name} fill />
-            {open ? (
-              <span className="pointer-events-none absolute top-2 right-2 rounded-md bg-[#ff4655] px-2 py-1 text-base font-black tracking-wide text-white shadow-[0_0_16px_rgba(255,70,85,0.55)]">
-                {discountLabel}
-              </span>
-            ) : null}
-          </div>
+        {open && !animate ? (
+          <button type="button" className="relative flex min-h-0 flex-1 cursor-zoom-in flex-col" aria-label={`Ampliar ${offer.name}`} onClick={() => setZoomed(true)}>
+            <CardArt offer={offer} open={open} animate={animate} discountLabel={discountLabel} letter={letter} />
+          </button>
         ) : (
-          <SkinImage file={offer.imageFile} name={offer.name} fill />
+          <CardArt offer={offer} open={open} animate={animate} discountLabel={discountLabel} letter={letter} />
         )}
         {wishedOpen ? <span className="wish-sweep" aria-hidden /> : null}
         {animate && offer.wished ? <span className="reveal-sheen" aria-hidden /> : null}
@@ -146,6 +146,46 @@ export function RevealCard({
           ))}
         </span>
       ) : null}
+      {zoomed ? (
+        <SkinZoom
+          name={offer.name}
+          edition={offer.edition}
+          detail={[offer.weaponName, offer.edition, priceText ?? formatVp(offer.priceVp)].filter(Boolean).join(" · ")}
+          imageFile={offer.imageFile}
+          onClose={() => setZoomed(false)}
+        />
+      ) : null}
     </article>
+  );
+}
+
+function CardArt({
+  offer,
+  open,
+  animate,
+  discountLabel,
+  letter,
+}: {
+  offer: OfferView;
+  open: boolean;
+  animate: boolean;
+  discountLabel: string | null;
+  letter: keyof typeof GRADE_COLORS | null;
+}) {
+  return (
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      <SkinImage file={offer.imageFile} name={offer.name} fill />
+      {open && discountLabel ? (
+        <span className="pointer-events-none absolute top-2 right-2 rounded-md bg-[#ff4655] px-2 py-1 text-base font-black tracking-wide text-white shadow-[0_0_16px_rgba(255,70,85,0.55)]">
+          {discountLabel}
+        </span>
+      ) : null}
+      {letter ? (
+        <span className="pointer-events-none absolute top-2 left-2 grid h-7 min-w-7 place-items-center rounded-md px-1 text-sm font-black text-zinc-950" style={{ background: GRADE_COLORS[letter] }}>
+          {letter}
+        </span>
+      ) : null}
+      {letter === "F" ? <span className={cn("trash-stamp", animate && "trash-stamp-in")}>Basura</span> : null}
+    </div>
   );
 }

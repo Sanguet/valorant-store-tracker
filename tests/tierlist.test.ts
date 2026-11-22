@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortTierSkins, tierOrder } from "@/domain/tierlist";
+import { gradeRank, sortByGrade, sortTierSkins, tierOrder } from "@/domain/tierlist";
 
 const skins = [
   { name: "Select", tier: "select" as const, priceVp: 875 },
@@ -13,6 +13,19 @@ describe("tierlist order", () => {
     expect(tierOrder("nuevo")).toBe("rareza-mayor");
     expect(sortTierSkins(skins, "rareza-mayor").map((skin) => skin.name)).toEqual(["Ultra", "Premium", "Select"]);
     expect(sortTierSkins(skins, "rareza-menor").map((skin) => skin.name)).toEqual(["Select", "Premium", "Ultra"]);
+  });
+
+  it("orders wishlist letters with the unclassified skins last", () => {
+    expect(gradeRank("S")).toBeLessThan(gradeRank("A"));
+    expect(gradeRank("F")).toBeLessThan(gradeRank(null));
+    expect(gradeRank("Z")).toBe(gradeRank(null));
+    expect(sortByGrade([
+      { name: "Zeta", grade: null },
+      { name: "Fox", grade: "F" },
+      { name: "Bea", grade: "B" },
+      { name: "Alfa", grade: null },
+      { name: "Sol", grade: "S" },
+    ]).map((item) => item.name)).toEqual(["Sol", "Bea", "Fox", "Alfa", "Zeta"]);
   });
 
   it("treats a varying price as the highest VP cost", () => {

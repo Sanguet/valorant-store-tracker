@@ -10,6 +10,32 @@ export const TIER_ORDERS = [
 
 export type TierOrder = (typeof TIER_ORDERS)[number]["id"];
 
+export const GRADE_LETTERS = ["S", "A", "B", "C", "D", "F"] as const;
+
+export type GradeLetter = (typeof GRADE_LETTERS)[number];
+
+export const GRADE_COLORS: Record<GradeLetter, string> = {
+  S: "#ff5d73",
+  A: "#ff9a3c",
+  B: "#f0c84a",
+  C: "#7dce6a",
+  D: "#5aa7ff",
+  F: "#8d93a3",
+};
+
+export function gradeLetter(value: string | null | undefined): GradeLetter | null {
+  return GRADE_LETTERS.find((letter) => letter === value) ?? null;
+}
+
+export function gradeRank(grade: string | null): number {
+  const letter = gradeLetter(grade);
+  return letter ? GRADE_LETTERS.indexOf(letter) : GRADE_LETTERS.length;
+}
+
+export function sortByGrade<T extends { grade: string | null; name: string }>(items: T[]): T[] {
+  return [...items].sort((left, right) => gradeRank(left.grade) - gradeRank(right.grade) || left.name.localeCompare(right.name, "es"));
+}
+
 const RARITY: Record<SkinTier, number> = {
   ultra: 5,
   exclusive: 4,

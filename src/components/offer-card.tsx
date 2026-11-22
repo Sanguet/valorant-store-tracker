@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { NoteSwitch } from "@/components/note-switch";
 import { SkinImage } from "@/components/skin-image";
+import { ZoomableSkin } from "@/components/skin-zoom";
 import { WishlistButton } from "@/components/wishlist-button";
 import { tierColor } from "@/domain/catalog";
 import { formatVp } from "@/domain/text";
@@ -16,7 +17,9 @@ export function OfferCard({ offer, large = false, heading = "h2" }: { offer: Off
       className={cn("relative flex flex-col overflow-hidden rounded-3xl bg-[#141922]", frame, offer.wished && "rarity-live")}
       style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}
     >
-      <SkinImage file={offer.imageFile} name={offer.name} large={large} />
+      <ZoomableSkin name={offer.name} edition={offer.edition} detail={[offer.weaponName, offer.edition, formatVp(offer.priceVp)].filter(Boolean).join(" · ")} imageFile={offer.imageFile}>
+        <SkinImage file={offer.imageFile} name={offer.name} large={large} />
+      </ZoomableSkin>
       <div className={`flex flex-1 flex-col gap-3 ${large ? "p-5" : "p-4"}`}>
         <div>
           <Heading className={`font-semibold leading-tight ${large ? "text-xl" : "text-lg"}`}>{offer.name}</Heading>

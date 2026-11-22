@@ -19,7 +19,7 @@ export interface NightFace {
   priceText: string;
   listPriceText: string | null;
   discountLabel: string | null;
-  trash: boolean;
+  grade: string | null;
   imageFile: string | null;
   wished: boolean;
   owned: boolean;
@@ -173,7 +173,7 @@ export function NightBoard({
                 priceText={face.priceText}
                 listPriceText={face.listPriceText}
                 discountLabel={face.discountLabel}
-                trash={face.trash}
+                grade={face.grade}
                 onReveal={() => reveal(face.id, face.wished, tierColor(face.edition))}
                 locked={intro || !ready}
                 onSettled={() => {

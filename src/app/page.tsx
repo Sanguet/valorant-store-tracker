@@ -27,7 +27,7 @@ export default async function HomePage() {
           message={refresh.message}
           messageOk={refresh.ok}
           accountPuuid={account?.puuid ?? ""}
-          trashIds={listGrades(sql).flatMap((grade) => (grade.grade === "F" ? [grade.skinId] : []))}
+          grades={listGrades(sql)}
         />
       ) : (
         <section className="flex min-h-0 flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-[#141922] p-6">

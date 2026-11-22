@@ -48,7 +48,7 @@ export function DailyBoard({
   message,
   messageOk,
   accountPuuid = "",
-  trashIds = [],
+  grades = [],
 }: {
   cycle: CycleView;
   serverNow: number;
@@ -56,7 +56,7 @@ export function DailyBoard({
   message: string;
   messageOk: boolean;
   accountPuuid?: string;
-  trashIds?: string[];
+  grades?: { skinId: string; grade: string }[];
 }) {
   const key = storageKey(accountPuuid);
   const [record, setRecord] = useState<RevealRecord | null>(null);
@@ -128,7 +128,7 @@ export function DailyBoard({
               open={open}
               animate={animatingId === offer.id}
               enterIndex={index}
-              trash={offer.skinId ? trashIds.includes(offer.skinId) : false}
+              grade={offer.skinId ? grades.find((item) => item.skinId === offer.skinId)?.grade ?? null : null}
               onReveal={() => reveal(offer.id, offer.wished, tierColor(offer.edition))}
               locked={intro || !ready}
               onSettled={() => {
