@@ -15,8 +15,8 @@ describe("tierlist order", () => {
     expect(sortTierSkins(skins, "rareza-menor").map((skin) => skin.name)).toEqual(["Select", "Premium", "Ultra"]);
   });
 
-  it("sorts published prices and leaves varying prices at the end", () => {
-    expect(sortTierSkins(skins, "vp-mayor").map((skin) => skin.name)).toEqual(["Premium", "Select", "Ultra"]);
+  it("treats a varying price as the highest VP cost", () => {
+    expect(sortTierSkins(skins, "vp-mayor").map((skin) => skin.name)).toEqual(["Ultra", "Premium", "Select"]);
     expect(sortTierSkins(skins, "vp-menor").map((skin) => skin.name)).toEqual(["Select", "Premium", "Ultra"]);
   });
 });

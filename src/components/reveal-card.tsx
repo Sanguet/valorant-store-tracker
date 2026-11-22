@@ -59,14 +59,14 @@ export function RevealCard({
   return (
     <article
       className={cn(
-        "relative h-full min-h-0 overflow-hidden rounded-2xl bg-black sm:rounded-3xl",
+        "relative h-full min-h-0 rounded-2xl bg-black sm:rounded-3xl",
         frame,
         wishedOpen && "reveal-wished",
         covered && "reveal-sleeve-card",
       )}
       style={rarity ? ({ borderColor: rarity, "--rarity": rarity } as CSSProperties) : undefined}
     >
-      <div inert={!open} aria-hidden={!open} className={cn("flex h-full min-h-0 flex-col", open ? "" : "opacity-0")}>
+      <div inert={!open} aria-hidden={!open} className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-[inherit]">
         {discountLabel ? (
           <div className="relative flex min-h-0 flex-1 flex-col">
             <SkinImage file={offer.imageFile} name={offer.name} fill />
@@ -106,11 +106,12 @@ export function RevealCard({
           </div>
         </div>
       </div>
+      {wishedOpen ? <span className="reveal-wished-glow" aria-hidden /> : null}
       {open && !animate ? null : (
         <button
           type="button"
           className={cn(
-            "reveal-sleeve absolute inset-0 flex cursor-pointer items-center justify-center overflow-hidden text-zinc-100 disabled:cursor-pointer",
+            "reveal-sleeve absolute inset-0 flex cursor-pointer items-center justify-center overflow-hidden rounded-[inherit] text-zinc-100 disabled:cursor-pointer",
             coverMotion,
           )}
           style={covered && !animate ? { animationDelay: `${enterIndex * 80}ms` } : undefined}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type DragEvent } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,13 +21,13 @@ export interface TierSkinCard {
   owned: boolean;
 }
 
-const GRADES = [
-  { id: "S", label: "S", title: "Se suma a deseados" },
-  { id: "A", label: "A", title: "Se suma a deseados" },
-  { id: "B", label: "B", title: "B" },
-  { id: "C", label: "C", title: "C" },
-  { id: "D", label: "D", title: "D" },
-  { id: "F", label: "F", title: "Basura" },
+const ROWS = [
+  { id: "S", note: "Deseados", color: "#ff5d73" },
+  { id: "A", note: "Deseados", color: "#ff9a3c" },
+  { id: "B", note: "", color: "#f0c84a" },
+  { id: "C", note: "", color: "#7dce6a" },
+  { id: "D", note: "", color: "#5aa7ff" },
+  { id: "F", note: "Basura", color: "#8d93a3" },
 ] as const;
 
 function href(weapon: string, order: TierOrder) {
@@ -51,9 +51,15 @@ export function TierBoard({
 }) {
   const router = useRouter();
   const [enlargedId, setEnlargedId] = useState<string | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<Record<string, string | null>>({});
+  const [over, setOver] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const signature = skins.map((skin) => `${skin.skinId}:${skin.grade ?? ""}`).join("|");
   const enlarged = skins.find((skin) => skin.skinId === enlargedId) ?? null;
+
+  useEffect(() => {
+    setPlaced({});
+  }, [signature]);
 
   useEffect(() => {
     if (!enlargedId) return;
@@ -64,19 +70,33 @@ export function TierBoard({
     return () => window.removeEventListener("keydown", onKey);
   }, [enlargedId]);
 
-  function grade(skinId: string, current: string | null, next: string) {
-    setPendingId(skinId);
+  function gradeOf(skin: TierSkinCard) {
+    return skin.skinId in placed ? placed[skin.skinId] : skin.grade;
+  }
+
+  function assign(skinId: string, grade: string | null) {
+    const skin = skins.find((item) => item.skinId === skinId);
+    if (!skin || gradeOf(skin) === grade) return;
+    setPlaced((current) => ({ ...current, [skinId]: grade }));
     start(async () => {
-      await setGradeAction(skinId, current === next ? null : next);
-      setPendingId(null);
+      await setGradeAction(skinId, grade);
     });
   }
+
+  function dropOn(event: DragEvent<HTMLElement>, grade: string | null) {
+    event.preventDefault();
+    setOver(null);
+    const skinId = event.dataTransfer.getData("text/plain");
+    if (skinId) assign(skinId, grade);
+  }
+
+  const bank = skins.filter((skin) => gradeOf(skin) === null);
 
   return (
     <div className="grid gap-5">
       <div>
         <h1 className="text-2xl font-semibold">Tierlist</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-400">Elegí un arma y clasificá sus skins. S y A se suman a deseados. F es basura: skins que no comprarías.</p>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-400">Elegí un arma y arrastrá cada skin a una fila. S y A se suman a deseados. F es basura: skins que no comprarías.</p>
       </div>
       {weapon ? (
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -116,47 +136,95 @@ export function TierBoard({
         </ul>
       )}
       {weapon && skins.length === 0 ? <p className="text-sm text-zinc-300">Esa arma no tiene skins de tienda.</p> : null}
-      {weapon && skins.length > 0 ? <p className="text-sm text-zinc-400">Doble click agranda la skin. Esc, otro doble click o la cruz la achican.</p> : null}
-      {skins.length > 0 ? (
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {skins.map((skin) => {
-            const color = tierColor(skin.edition);
-            return (
-              <li key={skin.skinId} className="overflow-hidden rounded-2xl border-2 bg-black" style={{ borderColor: color ?? "rgba(255,255,255,0.12)" }}>
-                <div className="cursor-zoom-in" onDoubleClick={() => setEnlargedId(skin.skinId)}>
-                  <SkinImage file={skin.imageFile} name={skin.name} />
+      {weapon && skins.length > 0 ? (
+        <>
+          <p className="text-sm text-zinc-400">Arrastrá una skin a una fila. Un click la agranda; otro click, Esc o el botón de arriba a la izquierda la achican.</p>
+          <div className="grid gap-1.5">
+            {ROWS.map((row) => (
+              <div key={row.id} className="grid grid-cols-[4.5rem_1fr] overflow-hidden rounded-xl bg-white/5">
+                <div className="grid content-center justify-items-center px-1 text-center text-zinc-950" style={{ background: row.color }}>
+                  <span className="text-2xl font-black leading-none">{row.id}</span>
+                  {row.note ? <span className="mt-1 text-[10px] font-semibold tracking-wide uppercase">{row.note}</span> : null}
                 </div>
-                <div className="grid gap-2 p-3">
-                  <p className="truncate text-sm font-medium">{skin.name}</p>
-                  <p className="truncate text-xs text-zinc-400">{[skin.edition, skin.priceText].filter(Boolean).join(" · ")}</p>
-                  {skin.owned ? <p className="text-xs text-emerald-200">Ya es tuya</p> : null}
-                  {skin.grade === "F" ? <p className="text-xs text-[#ffb4bc]">Basura</p> : null}
-                  <div className="flex flex-wrap gap-1" onDoubleClick={(event) => event.stopPropagation()}>
-                    {GRADES.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        title={item.title}
-                        aria-pressed={skin.grade === item.id}
-                        disabled={pending && pendingId === skin.skinId}
-                        onClick={() => grade(skin.skinId, skin.grade, item.id)}
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-semibold",
-                          skin.grade === item.id ? "bg-white text-zinc-950" : "bg-white/10 text-zinc-200 hover:bg-white/20",
-                        )}
-                      >
-                        {item.label}
-                      </button>
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setOver(row.id);
+                  }}
+                  onDragLeave={(event) => {
+                    if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+                    setOver((current) => (current === row.id ? null : current));
+                  }}
+                  onDrop={(event) => dropOn(event, row.id)}
+                  className={cn("flex min-h-24 flex-wrap gap-2 p-2", over === row.id && "bg-white/10")}
+                >
+                  {skins
+                    .filter((skin) => gradeOf(skin) === row.id)
+                    .map((skin) => (
+                      <Tile key={skin.skinId} skin={skin} pending={pending} onOpen={setEnlargedId} />
                     ))}
-                  </div>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+            ))}
+          </div>
+          <section
+            onDragOver={(event) => {
+              event.preventDefault();
+              setOver("banco");
+            }}
+            onDragLeave={(event) => {
+              if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+              setOver((current) => (current === "banco" ? null : current));
+            }}
+            onDrop={(event) => dropOn(event, null)}
+            className={cn("grid gap-3 rounded-2xl border border-white/10 p-3", over === "banco" && "border-white/40")}
+          >
+            <h2 className="text-sm font-medium text-zinc-200">Sin clasificar</h2>
+            {bank.length === 0 ? <p className="text-sm text-zinc-400">Todas las skins de esta arma ya están en una fila.</p> : null}
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+              {bank.map((skin) => (
+                <li key={skin.skinId}>
+                  <Tile skin={skin} pending={pending} onOpen={setEnlargedId} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
       ) : null}
-      {enlarged ? <Detail skin={enlarged} onClose={() => setEnlargedId(null)} /> : null}
+      {enlarged ? <Detail skin={{ ...enlarged, grade: gradeOf(enlarged) }} onClose={() => setEnlargedId(null)} /> : null}
     </div>
+  );
+}
+
+function Tile({ skin, pending, onOpen }: { skin: TierSkinCard; pending: boolean; onOpen: (skinId: string) => void }) {
+  const dragged = useRef(false);
+  const color = tierColor(skin.edition);
+  return (
+    <button
+      type="button"
+      draggable
+      aria-label={skin.name}
+      disabled={pending}
+      onDragStart={(event) => {
+        dragged.current = true;
+        event.dataTransfer.setData("text/plain", skin.skinId);
+        event.dataTransfer.effectAllowed = "move";
+      }}
+      onDragEnd={() => {
+        requestAnimationFrame(() => {
+          dragged.current = false;
+        });
+      }}
+      onClick={() => {
+        if (dragged.current) return;
+        onOpen(skin.skinId);
+      }}
+      className="grid w-24 shrink-0 gap-1 rounded-xl border bg-black p-1.5 text-left disabled:opacity-60"
+      style={{ borderColor: color ?? "rgba(255,255,255,0.16)" }}
+    >
+      {skin.imageFile ? <img src={`/imagen/${skin.imageFile}`} alt="" draggable={false} className="h-14 w-full object-contain" /> : <span className="grid h-14 place-items-center text-lg text-zinc-500">{skin.name.slice(0, 1)}</span>}
+      <span className="truncate text-[11px] text-zinc-200">{skin.name}</span>
+    </button>
   );
 }
 
@@ -165,21 +233,18 @@ function Detail({ skin, onClose }: { skin: TierSkinCard; onClose: () => void }) 
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
-      <article
-        className="tier-detail relative grid w-full max-w-3xl gap-3 rounded-3xl border-2 bg-[#090b10] p-4"
-        style={{ borderColor: color ?? "rgba(255,255,255,0.2)" }}
-        onClick={(event) => event.stopPropagation()}
-        onDoubleClick={onClose}
-      >
+      <article className="tier-detail relative grid w-full max-w-3xl gap-3 rounded-3xl border-2 bg-[#090b10] p-4" style={{ borderColor: color ?? "rgba(255,255,255,0.2)" }} onClick={(event) => event.stopPropagation()}>
         <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute top-3 left-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/70 text-xl text-white">
           ×
         </button>
-        <SkinImage file={skin.imageFile} name={skin.name} large />
+        <div className="cursor-zoom-out" onClick={onClose}>
+          <SkinImage file={skin.imageFile} name={skin.name} large />
+        </div>
         <div>
           <h2 className="text-xl font-semibold">{skin.name}</h2>
           <p className="text-sm text-zinc-400">{[skin.edition, skin.priceText].filter(Boolean).join(" · ")}</p>
           {skin.grade === "F" ? <p className="mt-1 text-sm text-[#ffb4bc]">Basura</p> : null}
-          {skin.grade && skin.grade !== "F" ? <p className="mt-1 text-sm text-zinc-300">Tier {skin.grade}</p> : null}
+          {skin.grade && skin.grade !== "F" ? <p className="mt-1 text-sm text-zinc-300">Fila {skin.grade}</p> : null}
         </div>
       </article>
     </div>,

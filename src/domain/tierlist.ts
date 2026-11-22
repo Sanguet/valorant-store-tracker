@@ -23,6 +23,13 @@ export function tierOrder(value: string | undefined): TierOrder {
   return match?.id ?? "rareza-mayor";
 }
 
+function compareVp(left: number | null, right: number | null, higherFirst: boolean): number {
+  if (left === null && right === null) return 0;
+  if (left === null) return higherFirst ? -1 : 1;
+  if (right === null) return higherFirst ? 1 : -1;
+  return higherFirst ? right - left : left - right;
+}
+
 export function publishedPrice(tier: SkinTier | null): number | null {
   if (tier === "select" || tier === "deluxe" || tier === "premium") return GUN_PRICE_VP[tier];
   return null;
@@ -35,12 +42,8 @@ export function sortTierSkins<T extends { name: string; tier: SkinTier | null; p
       const ranked = order === "rareza-mayor" ? -diff : diff;
       if (ranked !== 0) return ranked;
     } else {
-      if (left.priceVp === null && right.priceVp !== null) return 1;
-      if (left.priceVp !== null && right.priceVp === null) return -1;
-      if (left.priceVp !== null && right.priceVp !== null) {
-        const diff = order === "vp-mayor" ? right.priceVp - left.priceVp : left.priceVp - right.priceVp;
-        if (diff !== 0) return diff;
-      }
+      const ranked = compareVp(left.priceVp, right.priceVp, order === "vp-mayor");
+      if (ranked !== 0) return ranked;
     }
     return left.name.localeCompare(right.name, "es");
   });

@@ -198,7 +198,16 @@ summary:focus-visible {
 .reveal-wished {
   z-index: 1;
   transform: scale(1.03);
-  animation: rarity-frame 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.reveal-wished-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--rarity, #fff), 0 0 16px var(--rarity, #fff);
+  animation: rarity-glow 1.6s ease-in-out infinite;
 }
 
 .wish-sweep {
@@ -210,14 +219,10 @@ summary:focus-visible {
   animation: cover-sweep 1.15s ease-in-out infinite;
 }
 
-@keyframes rarity-frame {
+@keyframes rarity-glow {
   0%,
-  100% {
-    box-shadow: 0 0 0 1px var(--rarity, #fff), 0 0 8px var(--rarity, #fff);
-  }
-  50% {
-    box-shadow: 0 0 0 2px var(--rarity, #fff), 0 0 22px var(--rarity, #fff);
-  }
+  100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
 .tier-detail {
@@ -257,7 +262,7 @@ summary:focus-visible {
   .reveal-mark-arrive,
   .reveal-sleeve-card:hover .cover-shine,
   .reveal-sleeve-card:hover .cover-ring,
-  .reveal-wished,
+  .reveal-wished-glow,
   .wish-sweep,
   .tier-detail {
     animation: none;
@@ -270,8 +275,9 @@ summary:focus-visible {
     transition: none;
   }
 
-  .reveal-wished {
-    box-shadow: 0 0 12px var(--rarity, #fff);
+  .reveal-wished-glow {
+    opacity: 1;
+    box-shadow: inset 0 0 0 2px var(--rarity, #fff), 0 0 12px var(--rarity, #fff);
   }
 }
 
