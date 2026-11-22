@@ -1,6 +1,7 @@
 import { fold } from "@/domain/text";
 import type { Sql, SqlValue } from "@/domain/sql";
 import { forgetOwnedWishlist, noteValue } from "@/domain/store";
+import { isDiscountPercent } from "@/domain/night-market";
 import type { OfferNote } from "@/domain/types";
 
 const GAP_MS = 26 * 60 * 60 * 1000;
@@ -435,6 +436,7 @@ export interface NightSimCard {
   edition: string | null;
   tier: "select" | "deluxe" | "premium";
   priceVp: number;
+  discountPercent: number | null;
   imageFile: string | null;
   owned: boolean;
   wished: boolean;
@@ -487,6 +489,7 @@ function parseSim(raw: string, flags: Flags, images: Map<string, string | null>)
         edition: typeof row.edition === "string" ? row.edition : null,
         tier: row.tier,
         priceVp: row.priceVp,
+        discountPercent: isDiscountPercent(row.discountPercent) ? row.discountPercent : null,
         imageFile: images.get(row.skinId) ?? null,
         owned: isOwned(flags, row.skinId, null),
         wished: isWished(flags, row.skinId, row.name),

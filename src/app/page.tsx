@@ -4,7 +4,7 @@ import { DailyBoard } from "@/components/daily-board";
 import { RefreshButton, RefreshOnOpen } from "@/components/refresh-on-open";
 import { Button } from "@/components/ui/button";
 import { getHome } from "@/domain/queries";
-import { getAccount } from "@/domain/store";
+import { getAccount, listGrades } from "@/domain/store";
 import { getSql } from "@/server/db";
 import { cacheImages } from "@/server/images";
 import { lastRefresh } from "@/server/refresh";
@@ -27,6 +27,7 @@ export default async function HomePage() {
           message={refresh.message}
           messageOk={refresh.ok}
           accountPuuid={account?.puuid ?? ""}
+          trashIds={listGrades(sql).flatMap((grade) => (grade.grade === "F" ? [grade.skinId] : []))}
         />
       ) : (
         <section className="flex min-h-0 flex-1 flex-col justify-center rounded-3xl border border-white/10 bg-[#141922] p-6">

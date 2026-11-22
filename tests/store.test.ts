@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadFixture } from "@/domain/fixture";
 import { getBundleList, getHistory, getHome, getNightView, getWishlist } from "@/domain/queries";
-import { addWishlist, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, saveNightSim, setBundleNote, setOfferNote } from "@/domain/store";
+import { addWishlist, fillNightDiscounts, getAccount, recordSnapshot, rememberCatalogSkin, removeWishlist, saveNightSim, setBundleNote, setOfferNote } from "@/domain/store";
 import type { Snapshot } from "@/domain/types";
 import { demoSkins } from "../fixtures/demo";
 import { memorySql } from "./helpers";
@@ -210,7 +210,17 @@ describe("store", () => {
     };
     expect(saveNightSim(sql, resetAt, [candidate], now)).toBe(true);
     expect(saveNightSim(sql, resetAt, [candidate], now)).toBe(false);
-    expect(getNightView(sql, now).simulation?.map((offer) => offer.name)).toEqual(["Sheriff Ion"]);
+    const saved = getNightView(sql, now).simulation?.[0];
+    expect(saved?.name).toBe("Sheriff Ion");
+    expect(saved?.discountPercent).toBeGreaterThanOrEqual(10);
+    expect(saved?.discountPercent).toBeLessThanOrEqual(49);
+    sql.run("UPDATE night_sim SET offers_json = ? WHERE expires_at = ?", [JSON.stringify([{ ...candidate, tier: "select", discountPercent: null }]), resetAt]);
+    expect(fillNightDiscounts(sql, resetAt)).toBe(true);
+    const filled = getNightView(sql, now).simulation?.[0]?.discountPercent;
+    expect(filled).toBeGreaterThanOrEqual(10);
+    expect(filled).toBeLessThanOrEqual(49);
+    expect(fillNightDiscounts(sql, resetAt)).toBe(false);
+    expect(getNightView(sql, now).simulation?.[0]?.discountPercent).toBe(filled);
     recordSnapshot(sql, remoteSnapshot("2026-11-21T16:00:00.000Z", 68400));
     const after = getNightView(sql, now);
     expect(after.real).toBeNull();

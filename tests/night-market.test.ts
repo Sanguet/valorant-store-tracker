@@ -10,6 +10,7 @@ import {
   NIGHT_PREMIUM_MINIMUM,
   NIGHT_SAME_WEAPON_MAXIMUM,
   payAtDiscount,
+  rollDiscountPercent,
   type NightCandidate,
   type NightTier,
 } from "@/domain/night-market";
@@ -34,6 +35,16 @@ describe("night market", () => {
     expect(nightMenuGlows("2026-11-20", "2026-11-21", false)).toBe(true);
     expect(nightMenuGlows("2026-11-21", "2026-11-21", false)).toBe(false);
     expect(nightMenuGlows(null, "2026-11-21", true)).toBe(false);
+  });
+
+  it("rolls one integer percent from 10 through 49", () => {
+    expect(rollDiscountPercent(() => 0)).toBe(10);
+    expect(rollDiscountPercent(() => 0.999999)).toBe(49);
+    for (let step = 0; step < 40; step += 1) {
+      const percent = rollDiscountPercent(() => step / 40);
+      expect(percent).toBeGreaterThanOrEqual(10);
+      expect(percent).toBeLessThanOrEqual(49);
+    }
   });
 
   it("prices the published discount ends without picking a percent", () => {

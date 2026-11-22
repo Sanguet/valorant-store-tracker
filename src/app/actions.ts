@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toApiLanguage } from "@/domain/language";
-import { drawNightMarket, nightPool } from "@/domain/night-market";
+import { drawNightMarket, nightPool, rollDiscountPercent } from "@/domain/night-market";
 import { getNightView } from "@/domain/queries";
 import {
   addWishlist,
@@ -11,7 +11,9 @@ import {
   removeWishlist,
   removeWishlistSkin,
   resetStore,
+  fillNightDiscounts,
   saveNightSim,
+  setSkinGrade,
   setBundleNote,
   setLocale,
   setOfferNote,
@@ -26,6 +28,7 @@ import { readStoreCatalog } from "@/server/valorant";
 function refreshPages() {
   revalidatePath("/", "layout");
   revalidatePath("/mercado");
+  revalidatePath("/tierlist");
 }
 
 export async function refreshAction() {
@@ -87,12 +90,42 @@ export async function addCatalogSkinAction(skinId: string) {
   return { ok: true as const };
 }
 
+const GRADES = new Set(["S", "A", "B", "C", "D", "F"]);
+
+export async function setGradeAction(skinId: string, grade: string | null) {
+  const sql = await getSql();
+  const skin = (await readStoreCatalog(sql)).skins.find((item) => item.skinId === skinId.toLowerCase() && item.tier);
+  if (!skin) return;
+  const next = grade && GRADES.has(grade) ? grade : null;
+  setSkinGrade(sql, skin.skinId, next, new Date());
+  if (next === "S" || next === "A") addWishlist(sql, { skinId: skin.skinId, name: skin.name }, new Date());
+  if (next === "F") removeWishlistSkin(sql, skin.skinId);
+  rememberCatalogSkin(sql, {
+    skinId: skin.skinId,
+    levelId: skin.levelIds[0] ?? skin.skinId,
+    name: skin.name,
+    weaponName: skin.weaponName,
+    edition: skin.edition,
+    imageUrl: skin.imageUrl,
+  });
+  await cacheImages(sql);
+  saveSql();
+  refreshPages();
+}
+
 export async function ensureNightSimulation() {
   const sql = await getSql();
   const now = new Date();
   const view = getNightView(sql, now);
-  if (!view.resetAt || view.simulationLocked) return;
-  const drawn = drawNightMarket(nightPool(await readStoreCatalog(sql)), Math.random);
+  if (!view.resetAt) return;
+  if (view.simulationLocked) {
+    if (fillNightDiscounts(sql, view.resetAt)) saveSql();
+    return;
+  }
+  const drawn = drawNightMarket(nightPool(await readStoreCatalog(sql)), Math.random).map((offer) => ({
+    ...offer,
+    discountPercent: rollDiscountPercent(Math.random),
+  }));
   if (drawn.length === 0 || !saveNightSim(sql, view.resetAt, drawn, now)) return;
   for (const offer of drawn) {
     rememberCatalogSkin(sql, {

@@ -36,6 +36,7 @@ export interface NightCandidate {
   tier: NightTier;
   priceVp: number;
   imageUrl: string | null;
+  discountPercent?: number;
 }
 
 export function calendarDay(date: Date, timeZone = BUENOS_AIRES): string {
@@ -55,6 +56,16 @@ export function revealKey(value: string): number {
 
 export function payAtDiscount(priceVp: number, percent: number): number {
   return Math.round((priceVp * (100 - percent)) / 100);
+}
+
+export function isDiscountPercent(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= NIGHT_DISCOUNT_MIN && value <= NIGHT_DISCOUNT_MAX;
+}
+
+export function rollDiscountPercent(random: () => number): number {
+  const span = NIGHT_DISCOUNT_MAX - NIGHT_DISCOUNT_MIN + 1;
+  const index = Math.min(span - 1, Math.floor(Math.max(0, random()) * span));
+  return NIGHT_DISCOUNT_MIN + index;
 }
 
 export function isMeleeWeapon(weaponName: string): boolean {

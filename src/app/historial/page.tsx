@@ -28,7 +28,7 @@ export default async function HistoryPage() {
               </p>
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {item.cycle.offers.map((offer) => (
-                  <li key={offer.name} className={`rounded-2xl border-2 p-2 ${offer.wished ? "border-emerald-400" : "border-transparent"}`}>
+                  <li key={offer.name} className="rounded-2xl border-2 border-transparent p-2">
                     <SkinImage file={offer.imageFile} name={offer.name} />
                     <p className="mt-2 text-sm">{offer.name}</p>
                   </li>

@@ -1,6 +1,6 @@
+import { isDiscountPercent, rollDiscountPercent, type NightCandidate } from "@/domain/night-market";
 import { fold } from "@/domain/text";
 import { transaction, type Sql, type SqlValue } from "@/domain/sql";
-import type { NightCandidate } from "@/domain/night-market";
 import type { Account, OfferNote, ReaderChoice, Settings, Snapshot, SnapshotOffer } from "@/domain/types";
 
 const TOLERANCE_MS = 180_000;
@@ -337,9 +337,54 @@ export function saveNightSim(sql: Sql, expiresAt: string, offers: NightCandidate
     edition: offer.edition,
     tier: offer.tier,
     priceVp: offer.priceVp,
+    discountPercent: isDiscountPercent(offer.discountPercent) ? offer.discountPercent : rollDiscountPercent(Math.random),
   }));
   sql.run("INSERT INTO night_sim (expires_at, created_at, offers_json) VALUES (?, ?, ?)", [expiresAt, now.toISOString(), JSON.stringify(payload)]);
   return true;
+}
+
+export function fillNightDiscounts(sql: Sql, expiresAt: string): boolean {
+  const saved = sql.get<{ offers_json: string }>("SELECT offers_json FROM night_sim WHERE expires_at = ?", [expiresAt]);
+  if (!saved) return false;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(saved.offers_json);
+  } catch {
+    return false;
+  }
+  if (!Array.isArray(parsed)) return false;
+  let changed = false;
+  const next = parsed.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const row = item as { discountPercent?: unknown };
+    if (isDiscountPercent(row.discountPercent)) return item;
+    changed = true;
+    return { ...row, discountPercent: rollDiscountPercent(Math.random) };
+  });
+  if (!changed) return false;
+  sql.run("UPDATE night_sim SET offers_json = ? WHERE expires_at = ?", [JSON.stringify(next), expiresAt]);
+  return true;
+}
+
+const GRADES = new Set(["S", "A", "B", "C", "D", "F"]);
+
+export function listGrades(sql: Sql): { skinId: string; grade: string }[] {
+  return sql
+    .all<{ skin_id: string; grade: string }>("SELECT skin_id, grade FROM skin_grade")
+    .flatMap((row) => (GRADES.has(row.grade) ? [{ skinId: row.skin_id, grade: row.grade }] : []));
+}
+
+export function setSkinGrade(sql: Sql, skinId: string, grade: string | null, now: Date) {
+  if (!grade) {
+    sql.run("DELETE FROM skin_grade WHERE skin_id = ?", [skinId]);
+    return;
+  }
+  if (!GRADES.has(grade)) return;
+  sql.run(
+    `INSERT INTO skin_grade (skin_id, grade, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(skin_id) DO UPDATE SET grade = excluded.grade, updated_at = excluded.updated_at`,
+    [skinId, grade, now.toISOString()],
+  );
 }
 
 export function rememberCatalogSkin(sql: Sql, skin: { skinId: string; levelId: string | null; name: string; weaponName: string; edition: string | null; imageUrl: string | null }) {
@@ -405,6 +450,7 @@ export function resetStore(sql: Sql) {
     sql.run("DELETE FROM wishlist");
     sql.run("DELETE FROM night_market");
     sql.run("DELETE FROM night_sim");
+    sql.run("DELETE FROM skin_grade");
     sql.run("DELETE FROM ownership");
     sql.run("DELETE FROM skins");
     sql.run("DELETE FROM account");

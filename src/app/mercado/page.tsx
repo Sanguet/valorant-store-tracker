@@ -1,27 +1,28 @@
 import { NightBoard, type NightFace } from "@/components/night-board";
 import { GUN_PRICE_VP, NIGHT_DISCOUNT_MAX, NIGHT_DISCOUNT_MIN, NIGHT_OFFER_COUNT, NIGHT_PREMIUM_MINIMUM, NIGHT_SAME_WEAPON_MAXIMUM, payAtDiscount, revealKey } from "@/domain/night-market";
 import { getNightView, type NightRealCard, type NightSimCard } from "@/domain/queries";
-import { getAccount } from "@/domain/store";
+import { getAccount, listGrades } from "@/domain/store";
 import { formatVp } from "@/domain/text";
 import { ensureNightSimulation } from "@/app/actions";
 import { getSql } from "@/server/db";
 
 function simFace(offer: NightSimCard, index: number): NightFace {
-  const low = payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MAX);
-  const high = payAtDiscount(offer.priceVp, NIGHT_DISCOUNT_MIN);
+  const percent = offer.discountPercent;
+  const paid = percent === null ? offer.priceVp : payAtDiscount(offer.priceVp, percent);
   return {
     id: index + 1,
     skinId: offer.skinId,
     name: offer.name,
     weaponName: offer.weaponName,
     edition: offer.edition,
-    priceVp: offer.priceVp,
-    priceText: `${formatVp(low)} – ${formatVp(high)}`,
-    listPriceText: formatVp(offer.priceVp),
-    discountLabel: `−${NIGHT_DISCOUNT_MIN}–${NIGHT_DISCOUNT_MAX}%`,
+    priceVp: paid,
+    priceText: formatVp(paid),
+    listPriceText: percent === null ? null : formatVp(offer.priceVp),
+    discountLabel: percent === null ? null : `−${percent}%`,
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
+    trash: false,
   };
 }
 
@@ -41,6 +42,7 @@ function realFace(offer: NightRealCard, index: number): NightFace {
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
+    trash: false,
   };
 }
 
@@ -55,7 +57,11 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
     night = getNightView(sql, now);
   }
   const account = getAccount(sql);
-  const faces = mode === "real" && night.real ? night.real.offers.map(realFace) : (night.simulation ?? []).map(simFace);
+  const trashIds = new Set(listGrades(sql).flatMap((grade) => (grade.grade === "F" ? [grade.skinId] : [])));
+  const faces = (mode === "real" && night.real ? night.real.offers.map(realFace) : (night.simulation ?? []).map(simFace)).map((face) => ({
+    ...face,
+    trash: Boolean(face.skinId && trashIds.has(face.skinId)),
+  }));
   const expiresAt = mode === "real" ? (night.real?.expiresAt ?? null) : night.resetAt;
   const revealId = revealKey(`${mode}:${expiresAt ?? "sin-reinicio"}`);
   const empty =
@@ -104,7 +110,7 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
             <a className="underline" href="https://wiki.playvalorant.com/en-us/Night.Market" target="_blank" rel="noreferrer">
               wiki de VALORANT
             </a>
-            , mantenida por jugadores, no el artículo de Riot. El simulador no elige un porcentaje. Muestra el rango. El VP de los extremos es el precio oficial menos ese porcentaje, redondeado al entero más cercano. Riot no publica ni la curva ni el redondeo.
+            , mantenida por jugadores, no el artículo de Riot. Cada oferta simulada guarda un solo porcentaje entero, sorteado con la misma chance entre {NIGHT_DISCOUNT_MIN} y {NIGHT_DISCOUNT_MAX}. No cambia al recargar. Riot no publica esa chance: la igualdad no agrega pesos inventados. El VP es el precio oficial menos ese porcentaje, redondeado al entero más cercano. Riot no publica el redondeo.
           </p>
           <p>
             El simulador no incluye melee Exclusive, porque Riot dice que pueden aparecer y que el precio Exclusive varía, sin publicar la lista. Tampoco filtra por acto ni por pase de batalla: valorant-api no trae la fecha de salida ni esa marca. La wiki, además, saca las melee de más de 3.550 VP y las armas Exclusive o Ultra; esas últimas ya quedan afuera porque su precio no es fijo.

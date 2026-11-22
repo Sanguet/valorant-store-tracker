@@ -8,12 +8,10 @@ import type { OfferView } from "@/domain/queries";
 export function OfferCard({ offer, large = false, heading = "h2" }: { offer: OfferView; large?: boolean; heading?: "h2" | "h3" }) {
   const rarity = large ? tierColor(offer.edition) : null;
   const Heading = heading;
-  const frame = rarity
-    ? "border-[3px]"
-    : `border-2 ${offer.wished ? "border-emerald-400" : offer.owned ? "border-emerald-400/40" : "border-white/10"}`;
+  const frame = rarity ? "border-[3px]" : "border-2 border-white/10";
   return (
     <article
-      className={`flex flex-col overflow-hidden rounded-3xl bg-[#141922] ${frame} ${rarity && offer.wished ? "ring-2 ring-emerald-400 ring-inset" : ""}`}
+      className={`flex flex-col overflow-hidden rounded-3xl bg-[#141922] ${frame}`}
       style={rarity ? { borderColor: rarity } : undefined}
     >
       <SkinImage file={offer.imageFile} name={offer.name} large={large} />

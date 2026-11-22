@@ -195,6 +195,46 @@ summary:focus-visible {
   animation: cover-pulse 1.15s ease-in-out infinite;
 }
 
+.reveal-wished {
+  z-index: 1;
+  transform: scale(1.03);
+  animation: rarity-frame 1.6s ease-in-out infinite;
+}
+
+.wish-sweep {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(105deg, transparent 36%, rgba(255, 255, 255, 0.22) 50%, transparent 64%);
+  animation: cover-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes rarity-frame {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--rarity, #fff), 0 0 8px var(--rarity, #fff);
+  }
+  50% {
+    box-shadow: 0 0 0 2px var(--rarity, #fff), 0 0 22px var(--rarity, #fff);
+  }
+}
+
+.tier-detail {
+  animation: tier-open 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes tier-open {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @keyframes cover-sweep {
   0% { transform: translateX(-140%); }
   100% { transform: translateX(140%); }
@@ -216,14 +256,22 @@ summary:focus-visible {
   .reveal-sheen,
   .reveal-mark-arrive,
   .reveal-sleeve-card:hover .cover-shine,
-  .reveal-sleeve-card:hover .cover-ring {
+  .reveal-sleeve-card:hover .cover-ring,
+  .reveal-wished,
+  .wish-sweep,
+  .tier-detail {
     animation: none;
   }
 
   .reveal-sleeve-card,
-  .reveal-sleeve-card:hover {
+  .reveal-sleeve-card:hover,
+  .reveal-wished {
     transform: none;
     transition: none;
+  }
+
+  .reveal-wished {
+    box-shadow: 0 0 12px var(--rarity, #fff);
   }
 }
 

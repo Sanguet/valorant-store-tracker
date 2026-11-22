@@ -18,6 +18,7 @@ export interface NightFace {
   priceText: string;
   listPriceText: string | null;
   discountLabel: string | null;
+  trash: boolean;
   imageFile: string | null;
   wished: boolean;
   owned: boolean;
@@ -167,6 +168,7 @@ export function NightBoard({
                 priceText={face.priceText}
                 listPriceText={face.listPriceText}
                 discountLabel={face.discountLabel}
+                trash={face.trash}
                 onReveal={() => reveal(face.id, face.wished)}
                 locked={intro || !ready}
                 onSettled={() => {

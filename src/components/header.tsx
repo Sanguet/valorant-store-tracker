@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/historial", label: "Historial", glow: false },
   { href: "/lotes", label: "Lotes", glow: false },
   { href: "/deseos", label: "Deseos", glow: false },
+  { href: "/tierlist", label: "Tierlist", glow: false },
   { href: "/mercado", label: "Mercado negro", glow: true },
 ];
 

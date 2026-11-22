@@ -146,6 +146,12 @@ CREATE TABLE IF NOT EXISTS night_sim (
   created_at TEXT NOT NULL,
   offers_json TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS skin_grade (
+  skin_id TEXT PRIMARY KEY,
+  grade TEXT NOT NULL CHECK (grade IN ('S', 'A', 'B', 'C', 'D', 'F')),
+  updated_at TEXT NOT NULL
+);
 `;
 
 export function migrate(sql: Sql) {

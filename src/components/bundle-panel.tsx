@@ -76,9 +76,9 @@ export function BundlePanel({
 
 function SkinRow({ skin }: { skin: BundleSkinView }) {
   const rarity = tierColor(skin.edition);
-  const frame = skin.wished ? "border-2 border-emerald-400" : rarity ? "border-[3px]" : "border-2 border-white/10";
+  const frame = rarity ? "border-[3px]" : "border-2 border-white/10";
   return (
-    <li className={`rounded-2xl p-3 ${frame}`} style={skin.wished || !rarity ? undefined : { borderColor: rarity }}>
+    <li className={`rounded-2xl p-3 ${frame}`} style={rarity ? { borderColor: rarity } : undefined}>
       <SkinImage file={skin.imageFile} name={skin.name} />
       <p className="mt-3 font-medium">{skin.name}</p>
       <p className="text-sm text-zinc-400">{[skin.weaponName, skin.edition].filter(Boolean).join(" · ")}</p>
