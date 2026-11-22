@@ -8,6 +8,7 @@ import { tierColor } from "@/domain/catalog";
 import type { OfferView } from "@/domain/queries";
 import { formatVp } from "@/domain/text";
 import { cn } from "@/lib/cn";
+import { playRevealSound } from "@/lib/reveal-sound";
 
 const PARTICLES = [
   { id: "a", dx: "-42px", dy: "-56px" },
@@ -31,6 +32,8 @@ export function RevealCard({
   showNotes = true,
   detail = null,
   priceText = null,
+  listPriceText = null,
+  discountLabel = null,
 }: {
   offer: OfferView;
   open: boolean;
@@ -42,6 +45,8 @@ export function RevealCard({
   showNotes?: boolean;
   detail?: string | null;
   priceText?: string | null;
+  listPriceText?: string | null;
+  discountLabel?: string | null;
 }) {
   const rarity = open ? tierColor(offer.edition) : null;
   const frame = rarity ? "border-[3px]" : "border-2 border-white/15";
@@ -60,12 +65,30 @@ export function RevealCard({
       style={rarity ? { borderColor: rarity } : undefined}
     >
       <div inert={!open} aria-hidden={!open} className={cn("flex h-full min-h-0 flex-col", open ? "" : "opacity-0")}>
-        <SkinImage file={offer.imageFile} name={offer.name} fill />
+        {discountLabel ? (
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <SkinImage file={offer.imageFile} name={offer.name} fill />
+            {open ? (
+              <span className="pointer-events-none absolute top-1.5 right-1.5 rounded-md bg-[#ff4655] px-1.5 py-0.5 text-[11px] font-black tracking-wide text-white shadow-[0_0_16px_rgba(255,70,85,0.55)]">
+                {discountLabel}
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <SkinImage file={offer.imageFile} name={offer.name} fill />
+        )}
         {animate && offer.wished ? <span className="reveal-sheen" aria-hidden /> : null}
         <div className="flex shrink-0 flex-col gap-1 p-2">
           <div className="flex min-w-0 items-baseline justify-between gap-2">
             <h2 className="truncate text-sm font-semibold">{offer.name}</h2>
-            <p className="shrink-0 text-xs font-medium">{priceText ?? formatVp(offer.priceVp)}</p>
+            {priceText ? (
+              <p className="flex shrink-0 flex-col items-end leading-tight">
+                {listPriceText ? <span className="text-[10px] font-medium text-zinc-500 line-through">{listPriceText}</span> : null}
+                <span className="text-xs font-semibold text-amber-200">{priceText}</span>
+              </p>
+            ) : (
+              <p className="shrink-0 text-xs font-medium">{formatVp(offer.priceVp)}</p>
+            )}
           </div>
           <p className="truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition].filter(Boolean).join(" · ")}</p>
           {detail ? <p className="truncate text-[11px] text-zinc-300">{detail}</p> : null}
@@ -89,7 +112,10 @@ export function RevealCard({
           style={covered && !animate ? { animationDelay: `${enterIndex * 80}ms` } : undefined}
           aria-label="Revelar esta arma"
           disabled={locked}
-          onClick={onReveal}
+          onClick={() => {
+            if (!open) playRevealSound(offer.wished);
+            onReveal();
+          }}
           onAnimationEnd={(event) => {
             if (event.currentTarget !== event.target || !animate) return;
             if (event.animationName !== "reveal-cover" && event.animationName !== "reveal-cover-wish") return;

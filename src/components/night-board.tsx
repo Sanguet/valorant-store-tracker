@@ -16,7 +16,8 @@ export interface NightFace {
   edition: string | null;
   priceVp: number;
   priceText: string;
-  detail: string;
+  listPriceText: string | null;
+  discountLabel: string | null;
   imageFile: string | null;
   wished: boolean;
   owned: boolean;
@@ -163,8 +164,9 @@ export function NightBoard({
                 animate={animatingId === face.id}
                 enterIndex={index}
                 showNotes={false}
-                detail={face.detail}
                 priceText={face.priceText}
+                listPriceText={face.listPriceText}
+                discountLabel={face.discountLabel}
                 onReveal={() => reveal(face.id, face.wished)}
                 locked={intro || !ready}
                 onSettled={() => {

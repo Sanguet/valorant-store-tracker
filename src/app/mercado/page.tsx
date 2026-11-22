@@ -17,7 +17,8 @@ function simFace(offer: NightSimCard, index: number): NightFace {
     edition: offer.edition,
     priceVp: offer.priceVp,
     priceText: `${formatVp(low)} – ${formatVp(high)}`,
-    detail: `${NIGHT_DISCOUNT_MIN}% a ${NIGHT_DISCOUNT_MAX}% sobre ${formatVp(offer.priceVp)}`,
+    listPriceText: formatVp(offer.priceVp),
+    discountLabel: `−${NIGHT_DISCOUNT_MIN}–${NIGHT_DISCOUNT_MAX}%`,
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
@@ -26,7 +27,7 @@ function simFace(offer: NightSimCard, index: number): NightFace {
 
 function realFace(offer: NightRealCard, index: number): NightFace {
   const paid = offer.finalVp ?? offer.priceVp;
-  const detail = offer.discountPercent === null ? `Precio de lista ${formatVp(offer.priceVp)}` : `${offer.discountPercent}% sobre ${formatVp(offer.priceVp)}`;
+  const percent = offer.discountPercent;
   return {
     id: index + 1,
     skinId: offer.skinId,
@@ -35,7 +36,8 @@ function realFace(offer: NightRealCard, index: number): NightFace {
     edition: offer.edition,
     priceVp: paid,
     priceText: formatVp(paid),
-    detail,
+    listPriceText: percent === null ? null : formatVp(offer.priceVp),
+    discountLabel: percent === null ? null : `−${percent}%`,
     imageFile: offer.imageFile,
     wished: offer.wished,
     owned: offer.owned,
