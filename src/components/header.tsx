@@ -27,7 +27,7 @@ export function Header({ account, offer = null }: { account: string; offer?: { p
   }, [viewingNight]);
   return (
     <header className="border-b border-white/10">
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <span className="h-8 w-1.5 rounded-full bg-[#ff4655]" aria-hidden />
           <div>
@@ -38,7 +38,7 @@ export function Header({ account, offer = null }: { account: string; offer?: { p
             <p className="text-xs text-zinc-400">{account}</p>
           </div>
         </div>
-        <nav className="flex gap-1 overflow-x-auto py-1 text-sm">
+        <nav className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-2 px-2 py-2 text-sm">
           {LINKS.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
