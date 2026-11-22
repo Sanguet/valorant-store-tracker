@@ -19,7 +19,8 @@ export function WishlistButton({ skinId, name, wished, compact = false }: { skin
         start(() => wishlistAction(skinId, name, wished));
       }}
     >
-      {wished ? "Sacar de la lista" : "Sumar a deseados"}
+      <span className="wish-label-long">{wished ? "Sacar de la lista" : "Sumar a deseados"}</span>
+      {compact ? <span className="wish-label-short">{wished ? "Sacar" : "Deseo"}</span> : null}
     </Button>
   );
 }

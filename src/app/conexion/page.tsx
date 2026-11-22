@@ -79,7 +79,7 @@ export default async function ConnectionPage({ searchParams }: { searchParams: P
         </section>
       )}
       {exampleError && account ? <FormAlert>{exampleError}</FormAlert> : null}
-      <section className="mt-8 rounded-3xl border border-white/10 p-5">
+      <section className="mt-8 rounded-3xl border border-white/10 border-t-2 border-t-[#ff4655] p-5">
         <h2 className="text-lg font-medium">Borrar los datos de este perfil</h2>
         <p className="mt-2 text-sm text-zinc-400">Borra la tienda, el historial, los deseos y las notas de este perfil. Los demás perfiles quedan.</p>
         {resetError ? (

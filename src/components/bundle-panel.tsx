@@ -46,7 +46,7 @@ export function BundlePanel({
     <section className="overflow-hidden rounded-3xl border border-white/10 bg-[#141922]">
       <div className="bg-black">
         {bundle.imageFile ? (
-          <img src={`/imagen/${bundle.imageFile}`} alt="" className="h-44 w-full object-contain object-center" />
+          <img src={`/imagen/${bundle.imageFile}`} alt="" className="h-44 w-full origin-center scale-125 object-contain object-center" />
         ) : (
           <div className="grid h-44 place-items-center text-2xl text-zinc-500">{bundle.name.slice(0, 1)}</div>
         )}
@@ -68,7 +68,7 @@ export function BundlePanel({
         </div>
         <NoteSwitch kind="bundle" id={bundle.id} note={bundle.note} subject={bundle.name} />
         {bundle.skins.length > 0 && foldSkins ? (
-          <details open={skinsOpen}>
+          <details className="fold" open={skinsOpen}>
             <summary className="inline-flex cursor-pointer list-none rounded-full bg-white/10 px-3 py-1 text-sm text-zinc-100 marker:content-none [&::-webkit-details-marker]:hidden">
               Ver las skins ({bundle.skins.length})
             </summary>

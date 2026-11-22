@@ -75,9 +75,9 @@ export default async function NightMarketPage({ searchParams }: { searchParams: 
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-1">
-      <details className="shrink-0 text-sm text-zinc-300">
+      <details className="fold shrink-0 text-sm text-zinc-300">
         <summary className="cursor-pointer list-none py-0.5 text-zinc-100 marker:content-none [&::-webkit-details-marker]:hidden">Reglas y probabilidades</summary>
-        <div className="grid gap-3 pt-3">
+        <div className="grid max-h-[38dvh] gap-3 overflow-y-auto pt-3">
           <p>
             Riot, en el artículo{" "}
             <a className="underline" href="https://support.riotgames.com/en-us/valorant/store/nightmarket-valorant" target="_blank" rel="noreferrer">

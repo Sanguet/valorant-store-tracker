@@ -118,7 +118,7 @@ export function DailyBoard({
   return (
     <section className="relative flex min-h-0 flex-1 flex-col gap-2">
       <h1 className="sr-only">Tienda de hoy</h1>
-      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 sm:gap-3">
+      <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-2 gap-2 p-2.5 sm:gap-3">
         {cycle.offers.slice(0, 4).map((offer, index) => {
           const open = record?.offerIds.includes(offer.id) ?? false;
           return (
@@ -139,12 +139,15 @@ export function DailyBoard({
           );
         })}
       </div>
-      <div className="flex shrink-0 items-center justify-between gap-3 text-xs text-zinc-400">
-        <p className="min-w-0 truncate">
-          {fixture ? "Ejemplo · " : null}
-          Vence el {formatWhen(cycle.expiresAt)} · <Remaining expiresAt={cycle.expiresAt} serverNow={serverNow} />
-          {message ? <span className={messageOk ? "" : "text-[#ffb4bc]"}> · {message}</span> : null}
-        </p>
+      <div className="flex shrink-0 items-start justify-between gap-3 text-xs text-zinc-400">
+        <div className="min-w-0">
+          <p className="truncate">
+            {fixture ? "Ejemplo · " : null}
+            Vence el {formatWhen(cycle.expiresAt)} · <Remaining expiresAt={cycle.expiresAt} serverNow={serverNow} />
+            {message && messageOk ? ` · ${message}` : null}
+          </p>
+          {message && !messageOk ? <p className="line-clamp-2 text-[#ffb4bc]">{message}</p> : null}
+        </div>
         <RefreshButton variant="quiet" />
       </div>
       {intro ? (

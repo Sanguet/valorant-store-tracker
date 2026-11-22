@@ -61,7 +61,7 @@ export function RevealCard({
   return (
     <article
       className={cn(
-        "relative h-full min-h-0 rounded-2xl bg-black sm:rounded-3xl",
+        "reveal-card relative h-full min-h-0 rounded-2xl bg-black sm:rounded-3xl",
         frame,
         wishedOpen && "reveal-wished",
         covered && "reveal-sleeve-card",
@@ -95,9 +95,10 @@ export function RevealCard({
               <p className="shrink-0 text-xs font-medium">{formatVp(offer.priceVp)}</p>
             )}
           </div>
+          <p className="card-edition-line min-w-0 truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition, detail].filter(Boolean).join(" · ")}</p>
           <div className="flex min-w-0 items-center gap-1">
-            <p className="min-w-0 flex-1 truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition, detail].filter(Boolean).join(" · ")}</p>
-            <div className="flex min-w-0 items-center gap-1">
+            <p className="card-edition-inline min-w-0 flex-1 truncate text-[11px] text-zinc-400">{[offer.weaponName, offer.edition, detail].filter(Boolean).join(" · ")}</p>
+            <div className="card-actions flex min-w-0 items-center gap-1">
               {status ? <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px]", statusClass)}>{status}</span> : null}
               {showNotes ? <NoteSwitch kind="offer" id={offer.id} note={offer.note} subject={offer.name} nowrap /> : null}
               {offer.skinId && !offer.unresolved && !offer.owned ? (

@@ -49,12 +49,12 @@ function WishlistGroup({ title, items, now }: { title: string; items: ReturnType
           return (
             <li
               key={item.id}
-              className="rarity-live grid gap-3 rounded-3xl border-2 bg-[#141922] p-3 sm:grid-cols-[9rem_1fr]"
+              className="wish-row rarity-live grid gap-3 rounded-3xl border-2 bg-[#141922] p-3 sm:grid-cols-[9rem_1fr]"
               style={{ borderColor: color ?? "rgba(255,255,255,0.16)", "--rarity": color ?? "#ffffff" } as CSSProperties}
             >
               <SkinImage file={item.imageFile} name={item.name} short />
               <div className="min-w-0">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex w-fit max-w-full items-baseline gap-3">
                   <h3 className="text-lg font-medium">{item.name}</h3>
                   <RemoveWishlistButton id={item.id} name={item.name} />
                 </div>

@@ -158,7 +158,7 @@ export function NightBoard({
         </div>
       ) : null}
       {faces.length > 0 ? (
-        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 sm:grid-cols-3 sm:grid-rows-2 sm:gap-3">
+        <div className="grid min-h-0 flex-1 grid-cols-2 grid-rows-3 gap-2 p-1.5 sm:grid-cols-3 sm:grid-rows-2 sm:gap-3">
           {faces.map((face, index) => {
             const offer = toOffer(face);
             const open = record?.offerIds.includes(face.id) ?? false;

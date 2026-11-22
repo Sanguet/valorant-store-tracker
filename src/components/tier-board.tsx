@@ -101,7 +101,7 @@ export function TierBoard({
         <p className="mt-2 max-w-2xl text-sm text-zinc-400">Elegí un arma y arrastrá cada skin a una fila. S y A se suman a deseados. F es basura: skins que no comprarías.</p>
       </div>
       {weapon ? (
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-end justify-between gap-3 bg-[#090b10] px-4 py-2">
           <div>
             <p className="text-sm text-zinc-300">
               Arma: <span className="font-medium text-white">{weapon}</span>
@@ -150,6 +150,7 @@ export function TierBoard({
                 </div>
                 <DropLane
                   active={over === row.id}
+                  color={row.color}
                   className="flex min-h-24 flex-wrap content-start gap-2 p-2"
                   onOver={() => setOver(row.id)}
                   onLeave={(event) => {
@@ -237,6 +238,7 @@ function Tile({ skin, pending, onOpen }: { skin: TierSkinCard; pending: boolean;
 
 function DropLane({
   active,
+  color,
   className,
   onOver,
   onLeave,
@@ -244,6 +246,7 @@ function DropLane({
   children,
 }: {
   active: boolean;
+  color: string;
   className?: string;
   onOver: () => void;
   onLeave: (event: DragEvent<HTMLDivElement>) => void;
@@ -260,7 +263,8 @@ function DropLane({
       }}
       onDragLeave={onLeave}
       onDrop={onDrop}
-      className={cn(className, active && "bg-white/10")}
+      className={className}
+      style={active ? { boxShadow: `inset 0 0 0 2px ${color}` } : undefined}
     >
       {children}
     </div>
@@ -282,7 +286,7 @@ function Detail({
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
-      <article className="tier-detail relative grid w-full max-w-3xl gap-3 rounded-3xl border-2 bg-[#090b10] p-4" style={{ borderColor: color ?? "rgba(255,255,255,0.2)" }} onClick={(event) => event.stopPropagation()}>
+      <article className="tier-detail relative grid max-h-[90dvh] w-full max-w-3xl gap-3 overflow-y-auto rounded-3xl border-2 bg-[#090b10] p-4" style={{ borderColor: color ?? "rgba(255,255,255,0.2)" }} onClick={(event) => event.stopPropagation()}>
         <button type="button" aria-label="Cerrar" onClick={onClose} className="absolute top-3 left-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/70 text-xl text-white">
           ×
         </button>

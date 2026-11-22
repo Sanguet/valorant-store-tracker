@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createProfileAction } from "@/app/actions";
 import { calendarDay, NIGHT_SEEN_KEY, nightMenuGlows } from "@/domain/night-market";
@@ -19,6 +19,7 @@ const LINKS = [
 
 export function Header({ account, offer = null }: { account: string; offer?: { puuid: string; label: string } | null }) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
   const viewingNight = pathname.startsWith("/mercado");
   const [glows, setGlows] = useState(false);
   useEffect(() => {
@@ -26,6 +27,9 @@ export function Header({ account, offer = null }: { account: string; offer?: { p
     if (viewingNight) localStorage.setItem(NIGHT_SEEN_KEY, today);
     setGlows(nightMenuGlows(localStorage.getItem(NIGHT_SEEN_KEY), today, viewingNight));
   }, [viewingNight]);
+  useEffect(() => {
+    navRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [pathname]);
   return (
     <header className="border-b border-white/10">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-1">
@@ -33,14 +37,14 @@ export function Header({ account, offer = null }: { account: string; offer?: { p
           <span className="h-8 w-1.5 rounded-full bg-[#ff4655]" aria-hidden />
           <div>
             <Link href="/" className="text-lg font-semibold tracking-tight" aria-label="Valorant Store Tracker">
-              <span className="md:hidden">VST</span>
-              <span className="hidden md:inline">Valorant Store Tracker</span>
+              <span className="lg:hidden">VST</span>
+              <span className="hidden lg:inline">Valorant Store Tracker</span>
             </Link>
-            <p className="text-xs text-zinc-400">{account}</p>
+            <p className="max-w-[9rem] truncate text-xs text-zinc-400 sm:max-w-[14rem]">{account}</p>
           </div>
         </div>
-        <nav className="nav-scroll min-w-0 flex-1 text-sm">
-          <div className="flex w-max items-center gap-2 px-3 py-2">
+        <nav ref={navRef} className="nav-scroll min-w-0 flex-1 text-sm">
+          <div className="flex w-max items-center gap-2 px-5 py-3">
           {LINKS.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (

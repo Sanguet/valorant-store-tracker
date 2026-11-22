@@ -1,11 +1,13 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addCatalogSkinAction } from "@/app/actions";
 import { Button } from "@/components/ui/button";
-import { catalogNameMatches, catalogSkinsByWeapon, EDITION_FILTERS, type SkinTier, type WeaponChoice, type WishlistSkin } from "@/domain/catalog";
+import { catalogNameMatches, catalogSkinsByWeapon, EDITION_FILTERS, tierColor, type SkinTier, type WeaponChoice, type WishlistSkin } from "@/domain/catalog";
 import { fold } from "@/domain/text";
+import { cn } from "@/lib/cn";
 
 export function WishlistPicker({ skins, weapons, wishedIds, ownedIds }: { skins: WishlistSkin[]; weapons: WeaponChoice[]; wishedIds: string[]; ownedIds: string[] }) {
   const router = useRouter();
@@ -43,7 +45,7 @@ export function WishlistPicker({ skins, weapons, wishedIds, ownedIds }: { skins:
   }
 
   return (
-    <details className="rounded-3xl border border-white/10 bg-[#141922]">
+    <details className="fold rounded-3xl border border-white/10 bg-[#141922]">
       <summary className="cursor-pointer list-none px-4 py-3 text-lg font-medium marker:content-none [&::-webkit-details-marker]:hidden">Sumar a deseados</summary>
       <div className="grid gap-4 px-4 pb-5 sm:px-5">
       <p className="text-sm text-zinc-400">Los nombres son los del cliente.</p>
@@ -142,8 +144,9 @@ function WeaponGrid({ weapons, onChoose }: { weapons: WeaponChoice[]; onChoose: 
 }
 
 function SkinCard({ skin, already, owned, pending, disabled, onAdd }: { skin: WishlistSkin; already: boolean; owned: boolean; pending: boolean; disabled: boolean; onAdd: () => void }) {
+  const color = tierColor(skin.edition);
   return (
-    <li className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+    <li className={cn("flex flex-col overflow-hidden rounded-2xl border-2 bg-black/20", already && "rarity-live")} style={{ borderColor: color ?? "rgba(255,255,255,0.16)", "--rarity": color ?? "#ffffff" } as CSSProperties}>
       <div className="flex h-48 items-center justify-center bg-black/30 p-3">
         {skin.imageUrl ? (
           <img src={skin.imageUrl} alt="" width={480} height={270} className="h-full w-full object-contain object-center" />
